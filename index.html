@@ -139,6 +139,7 @@
 
         .editorial-prose {
             text-align: justify;
+            margin-top: auto;
         }
 
         .editorial-prose p {
@@ -168,9 +169,8 @@
             height: 100vh;
             display: flex;
             flex-direction: column;
-            justify-content: flex-end;
+            justify-content: center;
             padding-left: 8rem;
-            padding-bottom: 15vh;
             pointer-events: auto;
         }
 
@@ -367,11 +367,12 @@
 
         const container = document.getElementById('logo-3d');
 
-        // Scene Setup configured specifically for a 1:1 aspect ratio logo container
+        // Scene Setup
         const scene = new THREE.Scene();
         
+        // Pushed camera closer (Z: 2.5) so the logo defaults larger and face-on
         const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
-        camera.position.z = 4;
+        camera.position.set(0, 0, 2.5);
 
         const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
         renderer.setSize(120, 120);
@@ -379,14 +380,17 @@
         renderer.setClearColor(0x000000, 0); 
         container.appendChild(renderer.domElement);
 
-        // OrbitControls for Dragging & Hover interactions
+        // --- THE METAL ROD FIX ---
         const controls = new OrbitControls(camera, renderer.domElement);
-        controls.enableZoom = false; // Prevent user from zooming in/out
-        controls.enablePan = false;  // Prevent user from dragging the logo off-center
-        controls.enableDamping = true; // Adds a smooth, heavy feel when dragging
+        controls.enableZoom = false; // Prevents zooming in/out
+        controls.enablePan = false;  // Prevents dragging the logo off-center
+        
+        // Locks the vertical axis perfectly so it behaves like it's on a metal rod
+        controls.minPolarAngle = Math.PI / 2; 
+        controls.maxPolarAngle = Math.PI / 2; 
+        
+        controls.enableDamping = true; 
         controls.dampingFactor = 0.05;
-        controls.autoRotate = true; // Slowly spins the logo when left alone
-        controls.autoRotateSpeed = 1.2;
 
         // Studio lighting array
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
@@ -403,12 +407,10 @@
         let modelGroup = new THREE.Group();
         scene.add(modelGroup);
 
-        // Load the model.gltf
         const loader = new GLTFLoader();
         loader.load('model.gltf', (gltf) => {
             const model = gltf.scene;
 
-            // Apply monochromatic shader to match ink tone
             model.traverse((child) => {
                 if (child.isMesh) {
                     child.material = new THREE.MeshStandardMaterial({
@@ -424,19 +426,18 @@
             const center = box.getCenter(new THREE.Vector3());
             model.position.sub(center);
             
-            // Scale dynamically based on the bounding box size to fit the container
+            // Adjust scale to fit beautifully within the 120x120px boundary
             const size = box.getSize(new THREE.Vector3());
             const maxDim = Math.max(size.x, size.y, size.z);
-            const scale = 1.8 / maxDim; 
+            const scale = 2.4 / maxDim; // Increased scale for clearer visibility
             model.scale.set(scale, scale, scale); 
             
             modelGroup.add(model);
         });
 
-        // Simplified Animation Loop driven by OrbitControls
         function animate() {
             requestAnimationFrame(animate);
-            controls.update(); // Required for autoRotate and damping
+            controls.update(); 
             renderer.render(scene, camera);
         }
         
