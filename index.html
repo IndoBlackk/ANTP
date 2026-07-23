@@ -9,11 +9,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Manrope:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            /* Warmed canvas, deeper organic charcoal ink */
             --canvas: #f7f7f5;
             --ink: #111110; 
             --ink-faded: rgba(17, 17, 16, 0.4);
-            --border: rgba(17, 17, 16, 0.1);
+            --border: rgba(17, 17, 16, 0.15);
             --sans: 'Manrope', sans-serif;
             --serif: 'Cormorant Garamond', serif;
         }
@@ -36,6 +35,7 @@
             display: grid;
             grid-template-columns: minmax(320px, 24vw) 1fr;
             cursor: none;
+            box-shadow: inset 0 0 150px rgba(17, 17, 16, 0.03);
         }
 
         ::selection {
@@ -43,49 +43,39 @@
             color: var(--canvas);
         }
 
-        /* Fluid Custom Cursor */
+        /* Pure Ink Blend without the muddy blur */
+        p, h1, h2, h3, a, .meta-stamp {
+            mix-blend-mode: multiply;
+            opacity: 0.92;
+        }
+
         .cursor-dot {
             position: fixed;
             top: 0; left: 0;
-            width: 6px; height: 6px;
+            width: 8px; height: 8px;
             background-color: var(--ink);
             border-radius: 50%;
             pointer-events: none;
             z-index: 1000;
             transform: translate(-50%, -50%);
+            mix-blend-mode: multiply;
+            transition: width 0.25s cubic-bezier(0.19, 1, 0.22, 1), 
+                        height 0.25s cubic-bezier(0.19, 1, 0.22, 1);
         }
 
-        .cursor-trail {
-            position: fixed;
-            top: 0; left: 0;
-            width: 44px; height: 44px;
-            border: 1px solid var(--ink-faded);
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 999;
-            transform: translate(-50%, -50%);
-            transition: width 0.3s cubic-bezier(0.19, 1, 0.22, 1), 
-                        height 0.3s cubic-bezier(0.19, 1, 0.22, 1),
-                        background-color 0.3s ease,
-                        border-color 0.3s ease;
+        .cursor-dot.hover-active {
+            width: 16px;
+            height: 16px;
         }
 
-        .cursor-trail.hover-active {
-            width: 90px;
-            height: 90px;
-            background-color: var(--ink);
-            mix-blend-mode: exclusion;
-            border-color: transparent;
-        }
-
-        /* High-Performance CSS Noise Overlay */
+        /* Paper Pulp Texture */
         .noise-overlay {
             position: fixed;
             top: 0; left: 0;
             width: 100vw; height: 100vh;
             pointer-events: none;
             z-index: 50;
-            background-image: url('data:image/svg+xml,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noise"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noise)" opacity="0.05"/%3E%3C/svg%3E');
+            background-image: url('data:image/svg+xml,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noise"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="4" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noise)" opacity="0.06"/%3E%3C/svg%3E');
             background-repeat: repeat;
             animation: shift-noise 0.2s steps(2) infinite;
         }
@@ -95,7 +85,6 @@
             100% { background-position: 100% 100%; }
         }
 
-        /* Left Column: Context & Branding */
         .panel-left {
             position: relative;
             height: 100vh;
@@ -105,7 +94,6 @@
             justify-content: space-between;
             padding: 4.5rem 3.5rem;
             z-index: 10;
-            background-color: var(--canvas);
             pointer-events: auto;
             overflow-y: auto;
         }
@@ -116,7 +104,6 @@
             gap: 1.5rem;
         }
 
-        /* 3D Logo with Loading Veil */
         .logo-wrapper {
             position: relative;
             width: 160px;
@@ -169,7 +156,6 @@
             font-weight: 600;
         }
 
-        /* Editorial Prose - Refined */
         .editorial-prose {
             text-align: left;
             margin-top: 2rem;
@@ -181,15 +167,14 @@
             margin-bottom: 2.5rem;
             position: relative;
             overflow: hidden;
+            mix-blend-mode: multiply; 
         }
 
         .profile-portrait img {
             width: 100%;
             height: auto;
             display: block;
-            /* Combined grayscale, contrast, and bespoke SVG grain displacement */
             filter: grayscale(100%) contrast(1.15) url(#grain-displacement);
-            mix-blend-mode: multiply; 
         }
 
         .editorial-prose p {
@@ -218,7 +203,6 @@
             color: var(--ink-faded);
         }
 
-        /* Right Column: Interactive Canvas */
         .panel-right {
             position: relative;
             height: 100vh;
@@ -247,7 +231,6 @@
             width: fit-content;
         }
 
-        /* --- CINEMATIC OPTICAL PULL-FOCUS EFFECT --- */
         .nav-link {
             display: block;
             font-family: var(--serif);
@@ -258,7 +241,6 @@
             text-decoration: none;
             padding-right: 2rem;
             pointer-events: auto;
-            /* Dynamic typographic kerning based on viewport */
             letter-spacing: clamp(-0.04em, -0.2vw, -0.01em);
             color: rgba(17, 17, 16, 0.35); 
             
@@ -270,7 +252,7 @@
                         letter-spacing 0.8s cubic-bezier(0.19, 1, 0.22, 1);
         }
 
-        /* Keyboard Accessibility & Hover states */
+        /* Keep the cinematic blur ONLY on hover states */
         .nav-list:hover .nav-link {
             opacity: 0.4;
             filter: blur(2.5px);
@@ -287,17 +269,16 @@
             letter-spacing: 0.03em;
         }
 
-        /* --- TYPOGRAPHIC CONTEXT PANEL --- */
         .context-panel {
             position: fixed;
             right: 4rem;
             top: 50%;
             transform: translateY(-50%);
             width: 360px;
-            background: rgba(247, 247, 245, 0.75);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border: 1px solid rgba(17, 17, 16, 0.08);
+            background: rgba(247, 247, 245, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(17, 17, 16, 0.15);
             box-shadow: 0 30px 60px rgba(0, 0, 0, 0.04);
             padding: 3rem;
             opacity: 0;
@@ -313,7 +294,6 @@
             transition: opacity 0.7s ease, visibility 0s linear 0s;
         }
 
-        /* Bespoke Clip-Path Stagger Reveal */
         .context-title, .context-desc {
             clip-path: polygon(0 100%, 100% 100%, 100% 100%, 0 100%);
             transform: translateY(10px);
@@ -367,7 +347,7 @@
                 height: auto;
                 cursor: auto;
             }
-            .cursor-dot, .cursor-trail, .context-panel {
+            .cursor-dot, .context-panel {
                 display: none;
             }
             .panel-left {
@@ -399,7 +379,6 @@
 </head>
 <body>
 
-    <!-- SVG Filters for Image Treatment -->
     <svg width="0" height="0" style="position:absolute; z-index:-1;">
         <filter id="grain-displacement">
             <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" result="noise" />
@@ -409,7 +388,6 @@
 
     <div class="noise-overlay" id="noise"></div>
     <div class="cursor-dot" id="cursor-dot"></div>
-    <div class="cursor-trail" id="cursor-trail"></div>
 
     <aside class="panel-left reveal" style="animation-delay: 0.1s;">
         <header class="brand-header">
@@ -417,15 +395,15 @@
                 <div class="canvas-veil" id="canvas-veil"></div>
                 <div class="logo-container hover-target" aria-label="ANTP 3D Logo" id="logo-3d"></div>
             </div>
-            <div class="meta-stamp">Index</div>
+            <div class="meta-stamp">About</div>
         </header>
 
         <article class="editorial-prose reveal" style="animation-delay: 0.3s;">
             <div class="profile-portrait">
-                <img src="archie.jpg" alt="ANTP Portrait">
+                <img src="archie.jpg" alt="Archie">
             </div>
-            <p>A digital canvas. A curated space for visual and auditory exploration, constructed as an extension of physical intent.</p>
-            <p>There is no commercial mandate here. It exists as an archive—<em>created entirely for the sake of creating.</em></p>
+            <p>Hi! I'm Archie. I built this site as my own creative output. A space where I can display some of my work, connect and communicate, and somewhere I can create for the sake of creating.</p>
+            <p>There is no purpose to this site but to act as my own digital canvas, a corner on the expanse of the internet that I can call my own. <em>Something I have shaped and moulded myself.</em></p>
         </article>
     </aside>
 
@@ -434,27 +412,27 @@
             <ul class="nav-list">
                 <li class="nav-item reveal" style="animation-delay: 0.4s;" 
                     data-title="Samplr." 
-                    data-desc="An interactive digital playground. Make noise, manipulate frequencies, and experiment with generative soundscapes.">
+                    data-desc="A digital playground. Make noise, manipulate frequencies, and experiment with sound.">
                     <a href="/samplr" class="nav-link hover-target">Samplr</a>
                 </li>
                 <li class="nav-item reveal" style="animation-delay: 0.5s;" 
                     data-title="Audio." 
-                    data-desc="A curated archive of auditory exploration. Listen to completed tracks, stems, and atmospheric recordings.">
+                    data-desc="A collection of my audio work. Listen to completed tracks, stems, and recordings.">
                     <a href="/audio" class="nav-link hover-target">Audio</a>
                 </li>
                 <li class="nav-item reveal" style="animation-delay: 0.6s;" 
                     data-title="Image." 
-                    data-desc="Visual inspiration, photography, and structural references collected and curated over time.">
+                    data-desc="Visual inspiration, photography, and references I've collected.">
                     <a href="/image" class="nav-link hover-target">Image</a>
                 </li>
                 <li class="nav-item reveal" style="animation-delay: 0.7s;" 
                     data-title="About." 
-                    data-desc="The methodology, history, and intent behind the canvas.">
+                    data-desc="A bit more about me, my methodology, and the history behind this site.">
                     <a href="/about" class="nav-link hover-target">About</a>
                 </li>
                 <li class="nav-item reveal" style="animation-delay: 0.8s;" 
                     data-title="Contact." 
-                    data-desc="Open channels for commission, collaboration, or general inquiry.">
+                    data-desc="Get in touch for commissions, collaboration, or just to say hi.">
                     <a href="/contact" class="nav-link hover-target">Contact</a>
                 </li>
             </ul>
@@ -485,16 +463,11 @@
             });
         });
 
-        const lerp = (a, b, n) => (1 - n) * a + n * b;
         const dot = document.getElementById('cursor-dot');
-        const trail = document.getElementById('cursor-trail');
         const hoverTargets = document.querySelectorAll('.hover-target');
 
         let cursorX = window.innerWidth / 2;
         let cursorY = window.innerHeight / 2;
-        let trailX = cursorX;
-        let trailY = cursorY;
-        let isCursorActive = true;
 
         document.addEventListener('mousemove', (e) => {
             cursorX = e.clientX;
@@ -502,23 +475,9 @@
             dot.style.transform = `translate3d(${cursorX}px, ${cursorY}px, 0) translate(-50%, -50%)`;
         });
 
-        // Optimize performance by pausing the loop when cursor leaves window
-        document.addEventListener('mouseleave', () => isCursorActive = false);
-        document.addEventListener('mouseenter', () => isCursorActive = true);
-
-        function renderCursor() {
-            if (isCursorActive) {
-                trailX = lerp(trailX, cursorX, 0.12);
-                trailY = lerp(trailY, cursorY, 0.12);
-                trail.style.transform = `translate3d(${trailX}px, ${trailY}px, 0) translate(-50%, -50%)`;
-            }
-            requestAnimationFrame(renderCursor);
-        }
-        requestAnimationFrame(renderCursor);
-
         hoverTargets.forEach((el) => {
-            el.addEventListener('mouseenter', () => trail.classList.add('hover-active'));
-            el.addEventListener('mouseleave', () => trail.classList.remove('hover-active'));
+            el.addEventListener('mouseenter', () => dot.classList.add('hover-active'));
+            el.addEventListener('mouseleave', () => dot.classList.remove('hover-active'));
         });
     </script>
 
@@ -529,7 +488,6 @@
         import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
         const container = document.getElementById('logo-3d');
-        const trail = document.getElementById('cursor-trail');
         const veil = document.getElementById('canvas-veil');
 
         const scene = new THREE.Scene();
@@ -578,7 +536,6 @@
             modelGroup.scale.set(baseScale, baseScale, baseScale);
             modelGroup.rotation.set(0, 0, 0);
 
-            // Fade the veil out elegantly once loaded
             requestAnimationFrame(() => {
                 veil.classList.add('loaded');
             });
@@ -593,12 +550,10 @@
 
         container.addEventListener('mouseenter', () => {
             targetScaleMultiplier = 1.06; 
-            trail.classList.add('hover-active');
         });
 
         container.addEventListener('mouseleave', () => {
             targetScaleMultiplier = 1.0;
-            trail.classList.remove('hover-active');
         });
 
         container.addEventListener('mousedown', (e) => {
