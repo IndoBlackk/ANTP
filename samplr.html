@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANTP | Samplr</title>
+    <!-- SAMPLR FAVICON -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23f7f7f5'/%3E%3Crect x='6' y='6' width='8' height='8' fill='%23111110'/%3E%3Crect x='18' y='6' width='8' height='8' fill='none' stroke='%23111110' stroke-width='2'/%3E%3Crect x='6' y='18' width='8' height='8' fill='none' stroke='%23111110' stroke-width='2'/%3E%3Crect x='18' y='18' width='8' height='8' fill='%23111110'/%3E%3C/svg%3E">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,600&family=Manrope:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --canvas: #f7f7f5;
+            --ink: #111110; 
+            --ink-faded: rgba(17, 17, 16, 0.4);
+            --border: rgba(17, 17, 16, 0.15);
+            --border-heavy: rgba(17, 17, 16, 0.3);
+            
+            --sans: 'Manrope', sans-serif;
+            --serif: 'Cormorant Garamond', serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; cursor: none; }
+
+        body {
+            background-color: var(--canvas); 
+            color: var(--ink);
+            font-family: var(--sans); 
+            overflow: hidden;
+            height: 100vh; width: 100vw; position: relative;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            box-shadow: inset 0 0 150px rgba(17, 17, 16, 0.03);
+            transition: filter 0.1s ease;
+        }
+
+        /* Flash inversion for heavy kicks */
+        body.trigger-flash { filter: invert(0.05); }
+
+        /* --- THE INK ENGINE --- */
+        .ink-blend {
+            mix-blend-mode: multiply;
+            opacity: 0.92;
+        }
+
+        /* --- CUSTOM CURSOR --- */
+        .cursor-dot {
+            position: fixed;
+            top: 0; left: 0;
+            width: 8px; height: 8px;
+            background-color: var(--ink);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 10000;
+            transform: translate(-50%, -50%);
+            mix-blend-mode: multiply;
+            transition: width 0.25s cubic-bezier(0.19, 1, 0.22, 1), 
+                        height 0.25s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+
+        .cursor-dot.hover-active {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* --- PAPER PULP NOISE --- */
+        .noise-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            pointer-events: none;
+            z-index: 50;
+            background-image: url('data:image/svg+xml,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noise"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="4" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noise)" opacity="0.06"/%3E%3C/svg%3E');
+            background-repeat: repeat;
+            animation: shift-noise 0.2s steps(2) infinite;
+        }
+
+        @keyframes shift-noise {
+            0% { background-position: 0 0; }
+            100% { background-position: 100% 100%; }
+        }
+
+        /* --- THE TOP STAGE (VISUALIZER & ENVIRONMENT) --- */
+        .top-stage {
+            position: absolute; top: 0; left: 0; width: 100vw; height: calc(100vh - 360px);
+            z-index: 10; overflow: hidden; display: flex; flex-direction: column;
+        }
+
+        /* Header Bar */
+        .sys-header {
+            position: absolute; top: 3.5rem; left: 3.5rem; right: 4rem; z-index: 100;
+            display: flex; justify-content: space-between; align-items: flex-start;
+            mix-blend-mode: multiply;
+        }
+        
+        .brand-block { display: flex; flex-direction: column; gap: 0.5rem; }
+        .sys-title { font-family: var(--serif); font-weight: 300; font-size: 2.5rem; font-style: italic; color: var(--ink); line-height: 0.8; letter-spacing: 1px;}
+        .sys-sub { font-family: var(--sans); font-size: 0.65rem; font-weight: 600; letter-spacing: 0.15em; color: var(--ink-faded); text-transform: uppercase; }
+
+        .back-btn {
+            font-family: var(--sans); font-size: 0.65rem; font-weight: 600; letter-spacing: 0.15em; color: var(--ink-faded);
+            text-decoration: none; text-transform: uppercase; transition: color 0.4s ease;
+            border-bottom: 1px solid transparent; padding-bottom: 2px;
+        }
+        .back-btn:hover { color: var(--ink); }
+
+        /* Drafting Paper Grid */
+        .grid-container {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 100%;
+            perspective: 800px; z-index: 0; pointer-events: none;
+            mix-blend-mode: multiply;
+        }
+
+        .wireframe-floor {
+            position: absolute; bottom: -50%; left: -50%; width: 200%; height: 150%;
+            background-image: 
+                linear-gradient(var(--border) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 80px 80px;
+            transform-origin: center center;
+            animation: scrollGrid 4s linear infinite;
+            mask-image: linear-gradient(to top, rgba(0,0,0,1) 5%, transparent 70%);
+            -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,1) 5%, transparent 70%);
+            will-change: transform; transition: transform 0.05s ease-out;
+        }
+
+        /* Raw Ink Oscilloscope Canvas */
+        #reactor-canvas {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 5; pointer-events: none; mix-blend-mode: multiply;
+        }
+
+        /* --- THE COMMAND DECK (BOTTOM PARTITION) --- */
+        .command-deck {
+            position: absolute; bottom: 0; left: 0; width: 100vw; height: 360px;
+            background: transparent; border-top: 1px solid var(--border);
+            z-index: 100; display: flex; 
+        }
+
+        /* Left Panel: Fader Rack */
+        .deck-faders {
+            width: 320px; border-right: 1px solid var(--border); display: flex; justify-content: center;
+            align-items: center; gap: 40px; padding: 30px;
+            mix-blend-mode: multiply;
+        }
+
+        .fader-module { height: 100%; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+        .fader-label { font-size: 0.55rem; letter-spacing: 0.15em; writing-mode: vertical-rl; transform: rotate(180deg); color: var(--ink-faded); font-weight: 600; text-transform: uppercase; }
+        
+        .fader-track {
+            position: relative; width: 1px; flex-grow: 1; background: var(--border-heavy);
+            display: flex; justify-content: center;
+        }
+        .fader-track::after { content: ''; position: absolute; top: 0; bottom: 0; left: -20px; right: -20px; } /* Hitbox */
+        
+        .fader-fill { position: absolute; bottom: 0; width: 3px; background: var(--ink); pointer-events: none; }
+        .fader-thumb {
+            position: absolute; bottom: 50%; width: 24px; height: 2px; background: var(--ink);
+            pointer-events: none; transform: translateY(50%); transition: width 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+        .fader-track:hover .fader-thumb { width: 34px; }
+
+        .fader-val { font-family: var(--sans); font-size: 0.6rem; font-weight: 500; letter-spacing: 1px; color: var(--ink); }
+
+        /* Right Panel: Instrument Keyboard */
+        .deck-instrument {
+            flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;
+            padding: 30px; position: relative;
+        }
+
+        /* Routing Tabs */
+        .deck-routing {
+            display: flex; gap: 0; border: 1px solid var(--border); margin-bottom: 40px;
+            mix-blend-mode: multiply;
+        }
+        .route-tab {
+            padding: 10px 30px; font-size: 0.6rem; letter-spacing: 0.15em; font-weight: 600;
+            color: var(--ink-faded); text-transform: uppercase; border-right: 1px solid var(--border);
+            transition: color 0.3s ease, background 0.3s ease;
+        }
+        .route-tab:last-child { border-right: none; }
+        .route-tab:hover { color: var(--ink); background: rgba(17,17,16,0.03); }
+        .route-tab.active { color: var(--canvas); background: var(--ink); }
+
+        /* Matrix */
+        .key-matrix { display: flex; flex-direction: column; align-items: center; gap: 12px; mix-blend-mode: multiply;}
+        .key-row { display: flex; gap: 12px; }
+        .key-row.top-row { margin-left: -48px; } 
+
+        .key {
+            width: 80px; height: 90px; border: 1px solid var(--border); background: transparent;
+            display: flex; flex-direction: column; justify-content: space-between; padding: 12px;
+            transition: border-color 0.4s ease, transform 0.1s, background 0.2s; position: relative;
+        }
+
+        .key-letter { font-family: var(--serif); font-style: italic; font-size: 2rem; color: var(--ink-faded); line-height: 0.8; transition: color 0.3s ease; font-weight: 300; }
+        .key-name { font-size: 0.45rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--ink-faded); text-align: right; transition: color 0.3s ease;}
+
+        .key:hover { border-color: var(--border-heavy); }
+        .key:hover .key-letter, .key:hover .key-name { color: var(--ink); }
+        .key.active { background: var(--ink); border-color: var(--ink); transform: scale(0.96); }
+        .key.active .key-letter, .key.active .key-name { color: var(--canvas); font-weight: 400; }
+
+        /* --- INIT OVERLAY --- */
+        #init-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: var(--canvas); z-index: 2000; display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            transition: opacity 0.8s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+        .init-btn { 
+            font-family: var(--sans); font-size: 0.75rem; font-weight: 600; letter-spacing: 0.15em; 
+            color: var(--ink); background: transparent; text-transform: uppercase; 
+            border: 1px solid var(--border-heavy); padding: 18px 45px; 
+            transition: transform 0.1s, background 0.3s, color 0.3s; 
+            mix-blend-mode: multiply;
+        }
+        .init-btn:hover { background: var(--ink); color: var(--canvas); }
+        .init-btn:active { transform: scale(0.98); }
+    </style>
+</head>
+<body>
+
+    <div class="noise-overlay" id="noise"></div>
+    <div class="cursor-dot" id="cursor-dot"></div>
+
+    <div id="init-overlay">
+        <div class="sys-title ink-blend" style="margin-bottom: 40px; font-size: 3.5rem;">Samplr.</div>
+        <div class="init-btn hover-target" onclick="initializeEngine()">Initialize Audio</div>
+    </div>
+
+    <div class="top-stage">
+        <div class="sys-header">
+            <div class="brand-block">
+                <div class="sys-title">Samplr.</div>
+                <div class="sys-sub">Index / Audio Playground</div>
+            </div>
+            <a href="index.html" class="back-btn hover-target">Return</a>
+        </div>
+
+        <div class="grid-container">
+            <div class="wireframe-floor" id="reactive-floor"></div>
+        </div>
+
+        <canvas id="reactor-canvas"></canvas>
+    </div>
+
+    <div class="command-deck">
+        
+        <div class="deck-faders">
+            <div class="fader-module">
+                <div class="fader-label">Volume</div>
+                <div class="fader-track hover-target" data-param="vol"><div class="fader-fill" style="height:50%"></div><div class="fader-thumb" style="bottom:50%"></div></div>
+                <div class="fader-val" id="val-vol">0.50</div>
+            </div>
+            <div class="fader-module">
+                <div class="fader-label">Drive</div>
+                <div class="fader-track hover-target" data-param="drive"><div class="fader-fill" style="height:0%"></div><div class="fader-thumb" style="bottom:0%"></div></div>
+                <div class="fader-val" id="val-drive">0.00</div>
+            </div>
+            <div class="fader-module">
+                <div class="fader-label">Space</div>
+                <div class="fader-track hover-target" data-param="space"><div class="fader-fill" style="height:0%"></div><div class="fader-thumb" style="bottom:0%"></div></div>
+                <div class="fader-val" id="val-space">0.00</div>
+            </div>
+        </div>
+
+        <div class="deck-instrument">
+            
+            <div class="deck-routing">
+                <div class="route-tab hover-target active" data-bank="drums">Drums</div>
+                <div class="route-tab hover-target" data-bank="synth">Synth</div>
+                <div class="route-tab hover-target" data-bank="bass">Bass</div>
+            </div>
+
+            <div class="key-matrix">
+                <div class="key-row top-row">
+                    <div class="key hover-target" data-key="w"><div class="key-letter">W</div><div class="key-name">-</div></div>
+                    <div class="key hover-target" data-key="e"><div class="key-letter">E</div><div class="key-name">-</div></div>
+                    <div class="key hover-target" data-key="t"><div class="key-letter">T</div><div class="key-name">-</div></div>
+                    <div class="key hover-target" data-key="y"><div class="key-letter">Y</div><div class="key-name">-</div></div>
+                    <div class="key hover-target" data-key="u"><div class="key-letter">U</div><div class="key-name">-</div></div>
+                    <div class="key hover-target" data-key="o"><div class="key-letter">O</div><div class="key-name">-</div></div>
+                    <div class="key hover-target" data-key="p"><div class="key-letter">P</div><div class="key-name">-</div></div>
+                </div>
+                <div class="key-row bottom-row">
+                    <div class="key hover-target" data-key="a"><div class="key-letter">A</div><div class="key-name">-</div></div>
+                    <div class="key hover-target" data-key="s"><div class="key-letter">S</div><div class="key-name">-</div></div>
+                    <div class="key hover-target" data-key="d"><div class="key-letter">D</div><div class="key-name">-</div></div>
+                    <div class="key hover-target" data-key="f"><div class="key-letter">F</div><div class="key-name">-</div></div>
+                    <div class="key hover-target" data-key="g"><div class="key-letter">G</div><div class="key-name">-</div></div>
+                    <div class="key hover-target" data-key="h"><div class="key-letter">H</div><div class="key-name">-</div></div>
+                    <div class="key hover-target" data-key="j"><div class="key-letter">J</div><div class="key-name">-</div></div>
+                    <div class="key hover-target" data-key="k"><div class="key-letter">K</div><div class="key-name">-</div></div>
+                    <div class="key hover-target" data-key="l"><div class="key-letter">L</div><div class="key-name">-</div></div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        // --- CUSTOM CURSOR ---
+        const dot = document.getElementById('cursor-dot');
+        const hoverTargets = document.querySelectorAll('.hover-target');
+
+        let cursorX = window.innerWidth / 2;
+        let cursorY = window.innerHeight / 2;
+
+        document.addEventListener('mousemove', (e) => {
+            cursorX = e.clientX;
+            cursorY = e.clientY;
+            dot.style.transform = `translate3d(${cursorX}px, ${cursorY}px, 0) translate(-50%, -50%)`;
+        });
+
+        hoverTargets.forEach((el) => {
+            el.addEventListener('mouseenter', () => dot.classList.add('hover-active'));
+            el.addEventListener('mouseleave', () => dot.classList.remove('hover-active'));
+        });
+
+        // --- AUDIO ENGINE ---
+        let audioCtx, masterGain, masterCompressor, analyser, distortionNode;
+        let delayNode, feedbackGain, spaceGain;
+        let isEngineAwake = false;
+        
+        let Params = { drive: 0, space: 0, vol: 0.5 };
+
+        function makeDistortionCurve(amount) {
+            let n = 44100;
+            let curve = new Float32Array(n);
+            if (amount <= 0) {
+                for (let i = 0; i < n; ++i) { curve[i] = (i * 2) / n - 1; }
+                return curve;
+            }
+            
+            let k = amount * 150;
+            let deg = Math.PI / 180;
+            for (let i = 0; i < n; ++i) {
+                let x = i * 2 / n - 1;
+                curve[i] = (3 + k) * x * 20 * deg / (Math.PI + k * Math.abs(x));
+            }
+            return curve;
+        }
+
+        function initializeEngine() {
+            if(isEngineAwake) return;
+            document.getElementById('init-overlay').style.opacity = '0';
+            setTimeout(() => document.getElementById('init-overlay').style.display = 'none', 800);
+            
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioCtx.createAnalyser(); analyser.fftSize = 2048; analyser.smoothingTimeConstant = 0.5;
+
+            distortionNode = audioCtx.createWaveShaper();
+            distortionNode.curve = makeDistortionCurve(Params.drive); distortionNode.oversample = '4x';
+
+            delayNode = audioCtx.createDelay(2.0); delayNode.delayTime.value = 0.35;
+            feedbackGain = audioCtx.createGain(); feedbackGain.gain.value = 0.4;
+            spaceGain = audioCtx.createGain(); spaceGain.gain.value = Params.space;
+
+            masterGain = audioCtx.createGain(); masterGain.gain.value = Params.vol;
+            masterCompressor = audioCtx.createDynamicsCompressor();
+            masterCompressor.threshold.value = -10; masterCompressor.ratio.value = 10; masterCompressor.attack.value = 0.001;
+
+            delayNode.connect(feedbackGain); feedbackGain.connect(delayNode); delayNode.connect(spaceGain);
+            
+            distortionNode.connect(masterGain);        
+            distortionNode.connect(delayNode);         
+            spaceGain.connect(masterGain);             
+            
+            masterGain.connect(masterCompressor); 
+            masterCompressor.connect(analyser); 
+            analyser.connect(audioCtx.destination);
+            
+            isEngineAwake = true; 
+            requestAnimationFrame(drawReactor);
+        }
+
+        // --- HARDWARE FADERS ---
+        document.querySelectorAll('.fader-track').forEach(track => {
+            const param = track.getAttribute('data-param');
+            const fill = track.parentElement.querySelector('.fader-fill');
+            const thumb = track.parentElement.querySelector('.fader-thumb');
+            const valDisp = document.getElementById(`val-${param}`);
+            let isDragging = false;
+
+            function updateFader(e) {
+                const rect = track.getBoundingClientRect();
+                let y = e.clientY - rect.top; y = Math.max(0, Math.min(y, rect.height));
+                let val = 1 - (y / rect.height); 
+                
+                fill.style.height = `${val * 100}%`; thumb.style.bottom = `${val * 100}%`; valDisp.innerText = val.toFixed(2);
+                Params[param] = val;
+                
+                if(!isEngineAwake) return;
+                
+                if(param === 'vol') masterGain.gain.setTargetAtTime(val * 1.5, audioCtx.currentTime, 0.05);
+                if(param === 'drive') distortionNode.curve = makeDistortionCurve(val);
+                if(param === 'space') {
+                    spaceGain.gain.setTargetAtTime(val * 0.8, audioCtx.currentTime, 0.05);
+                    feedbackGain.gain.setTargetAtTime(0.2 + (val * 0.6), audioCtx.currentTime, 0.05);
+                }
+            }
+
+            track.addEventListener('mousedown', (e) => { isDragging = true; updateFader(e); });
+            window.addEventListener('mousemove', (e) => { if(isDragging) updateFader(e); });
+            window.addEventListener('mouseup', () => { isDragging = false; });
+        });
+
+        // --- THE REACTOR DRAW ENGINE & REACTIVE FLOOR ---
+        const reactorCanvas = document.getElementById('reactor-canvas');
+        const rCtx = reactorCanvas.getContext('2d');
+        const floorGrid = document.getElementById('reactive-floor');
+
+        function resizeReactor() { 
+            const topStage = document.querySelector('.top-stage');
+            reactorCanvas.width = topStage.clientWidth; reactorCanvas.height = topStage.clientHeight; 
+        }
+        window.addEventListener('resize', resizeReactor); resizeReactor();
+
+        function drawReactor() {
+            if (!isEngineAwake) return;
+            requestAnimationFrame(drawReactor);
+            
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            analyser.getByteTimeDomainData(dataArray);
+
+            rCtx.clearRect(0, 0, reactorCanvas.width, reactorCanvas.height);
+            
+            let sum = 0; for(let i=0; i<bufferLength; i++) sum += Math.abs(dataArray[i] - 128);
+            const intensity = sum / bufferLength; 
+
+            const tilt = 75 - (intensity * 0.5); 
+            const floorScale = 1 + (intensity * 0.005);
+            floorGrid.style.transform = `rotateX(${tilt}deg) scale(${floorScale})`;
+
+            // Draw crisp ink waveform
+            const sliceWidth = reactorCanvas.width * 1.0 / bufferLength;
+            rCtx.lineWidth = 1.5;
+            rCtx.strokeStyle = `rgba(17, 17, 16, 0.8)`; // Charcoal ink
+            rCtx.beginPath();
+            
+            let x = 0;
+            for (let i = 0; i < bufferLength; i++) {
+                const v = dataArray[i] / 128.0; 
+                const y = (reactorCanvas.height / 2) + ((v * (reactorCanvas.height / 2) - (reactorCanvas.height / 2)) * 1.2);
+                
+                if (i === 0) rCtx.moveTo(x, y); else rCtx.lineTo(x, y); 
+                x += sliceWidth;
+            }
+            rCtx.stroke();
+        }
+
+        function triggerFlash(isHeavy) {
+            if(!isHeavy) return;
+            document.body.classList.add('trigger-flash');
+            clearTimeout(document.body.flashTimer);
+            document.body.flashTimer = setTimeout(() => document.body.classList.remove('trigger-flash'), 40); 
+        }
+
+        // --- HYPER-POP AUDIO SYNTHESIS ---
+        const Synth = {
+            playGabberKick: (freq=300, drop=30) => {
+                const t = audioCtx.currentTime; const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+                osc.type = 'sine'; osc.frequency.setValueAtTime(freq, t); osc.frequency.exponentialRampToValueAtTime(45, t + 0.05); osc.frequency.exponentialRampToValueAtTime(drop, t + 0.4);
+                gain.gain.setValueAtTime(1.5, t); gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+                osc.connect(gain); gain.connect(distortionNode); osc.start(t); osc.stop(t + 0.6);
+                triggerFlash(true);
+            },
+            playGlassSnare: (filterFreq=3000) => {
+                const t = audioCtx.currentTime; const bufferSize = audioCtx.sampleRate * 0.3;
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate); let data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+                const noise = audioCtx.createBufferSource(); noise.buffer = buffer; 
+                const filter = audioCtx.createBiquadFilter(); const gain = audioCtx.createGain();
+                filter.type = 'bandpass'; filter.frequency.value = filterFreq; filter.Q.value = 2.0; 
+                gain.gain.setValueAtTime(1.5, t); gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+                noise.connect(filter); filter.connect(gain); gain.connect(distortionNode); noise.start(t);
+                triggerFlash(false);
+            },
+            playFMPing: (modFreq, carrFreq, decay) => {
+                const t = audioCtx.currentTime; const osc = audioCtx.createOscillator(); const mod = audioCtx.createOscillator();
+                const modGain = audioCtx.createGain(); const env = audioCtx.createGain();
+                mod.type = 'square'; mod.frequency.value = modFreq;
+                modGain.gain.setValueAtTime(1000, t); modGain.gain.exponentialRampToValueAtTime(10, t + (decay * 0.3));
+                mod.connect(modGain); modGain.connect(osc.frequency);
+                osc.type = 'sine'; osc.frequency.value = carrFreq;
+                env.gain.setValueAtTime(1, t); env.gain.exponentialRampToValueAtTime(0.001, t + decay);
+                osc.connect(env); env.connect(distortionNode);
+                mod.start(t); osc.start(t); mod.stop(t + decay); osc.stop(t + decay);
+            },
+            playHeavySub: (freq) => {
+                const t = audioCtx.currentTime; const osc = audioCtx.createOscillator(); const env = audioCtx.createGain();
+                osc.type = 'triangle'; osc.frequency.value = freq;
+                env.gain.setValueAtTime(0, t); env.gain.linearRampToValueAtTime(1.2, t + 0.05); env.gain.exponentialRampToValueAtTime(0.001, t + 1.5);
+                osc.connect(env); env.connect(distortionNode); osc.start(t); osc.stop(t + 1.6);
+                triggerFlash(true);
+            },
+            playSynthTone: (freq) => {
+                const t = audioCtx.currentTime; const gain = audioCtx.createGain(); const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass'; filter.frequency.setValueAtTime(800, t); filter.frequency.exponentialRampToValueAtTime(5000, t + 0.1);
+                gain.gain.setValueAtTime(0, t); gain.gain.linearRampToValueAtTime(0.4, t + 0.02); gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+                [-5, 0, 5].forEach(detune => {
+                    let osc = audioCtx.createOscillator(); osc.type = 'sawtooth'; osc.frequency.value = freq; osc.detune.value = detune;
+                    osc.connect(filter); osc.start(t); osc.stop(t + 0.6);
+                });
+                filter.connect(gain); gain.connect(distortionNode);
+            }
+        };
+
+        // --- THE BANK SYSTEM & QWERTY MAPPING ---
+        const Banks = {
+            drums: {
+                'w': { n: 'HAT_CL', a: () => Synth.playFMPing(6000, 8000, 0.1) }, 'e': { n: 'HAT_OP', a: () => Synth.playFMPing(6000, 8000, 0.3) },
+                't': { n: 'GLTCH_1', a: () => Synth.playFMPing(200, 5000, 0.1) }, 'y': { n: 'GLTCH_2', a: () => Synth.playFMPing(5000, 200, 0.1) },
+                'u': { n: 'SUB_808', a: () => Synth.playHeavySub(43.65) }, 'o': { n: 'SUB_LOW', a: () => Synth.playHeavySub(32.70) },
+                'p': { n: 'COLLAPSE', a: () => { Synth.playHeavySub(20.00); Synth.playGabberKick(); } },
+                'a': { n: 'KICK_A', a: () => Synth.playGabberKick(150, 30) }, 's': { n: 'KICK_B', a: () => { Synth.playGabberKick(250, 20); Synth.playFMPing(100, 50, 0.1); } },
+                'd': { n: 'SNARE', a: () => Synth.playGlassSnare(3000) }, 'f': { n: 'CLAP', a: () => { Synth.playGlassSnare(1500); Synth.playFMPing(4000, 1000, 0.1); } },
+                'g': { n: 'CHAIN_1', a: () => Synth.playFMPing(2000, 800, 0.2) }, 'h': { n: 'CHAIN_2', a: () => Synth.playFMPing(1500, 3000, 0.3) },
+                'j': { n: 'ANVIL', a: () => Synth.playFMPing(8000, 1200, 0.1) }, 'k': { n: 'CLICK', a: () => Synth.playFMPing(400, 100, 0.05) },
+                'l': { n: 'TICK', a: () => Synth.playFMPing(12000, 5000, 0.05) }
+            },
+            synth: {
+                'w': { n: 'C#4', a: () => Synth.playSynthTone(277.18) }, 'e': { n: 'D#4', a: () => Synth.playSynthTone(311.13) },
+                't': { n: 'F#4', a: () => Synth.playSynthTone(369.99) }, 'y': { n: 'G#4', a: () => Synth.playSynthTone(415.30) },
+                'u': { n: 'A#4', a: () => Synth.playSynthTone(466.16) }, 'o': { n: 'C#5', a: () => Synth.playSynthTone(554.37) },
+                'p': { n: 'D#5', a: () => Synth.playSynthTone(622.25) },
+                'a': { n: 'C4', a: () => Synth.playSynthTone(261.63) }, 's': { n: 'D4', a: () => Synth.playSynthTone(293.66) },
+                'd': { n: 'E4', a: () => Synth.playSynthTone(329.63) }, 'f': { n: 'F4', a: () => Synth.playSynthTone(349.23) },
+                'g': { n: 'G4', a: () => Synth.playSynthTone(392.00) }, 'h': { n: 'A4', a: () => Synth.playSynthTone(440.00) },
+                'j': { n: 'B4', a: () => Synth.playSynthTone(493.88) }, 'k': { n: 'C5', a: () => Synth.playSynthTone(523.25) },
+                'l': { n: 'D5', a: () => Synth.playSynthTone(587.33) }
+            },
+            bass: {
+                'w': { n: 'C#2', a: () => Synth.playHeavySub(69.30) }, 'e': { n: 'D#2', a: () => Synth.playHeavySub(77.78) },
+                't': { n: 'F#2', a: () => Synth.playHeavySub(92.50) }, 'y': { n: 'G#2', a: () => Synth.playHeavySub(103.83) },
+                'u': { n: 'A#2', a: () => Synth.playHeavySub(116.54) }, 'o': { n: 'C#3', a: () => Synth.playHeavySub(138.59) },
+                'p': { n: 'D#3', a: () => Synth.playHeavySub(155.56) },
+                'a': { n: 'C2', a: () => Synth.playHeavySub(65.41) }, 's': { n: 'D2', a: () => Synth.playHeavySub(73.42) },
+                'd': { n: 'E2', a: () => Synth.playHeavySub(82.41) }, 'f': { n: 'F2', a: () => Synth.playHeavySub(87.31) },
+                'g': { n: 'G2', a: () => Synth.playHeavySub(98.00) }, 'h': { n: 'A2', a: () => Synth.playHeavySub(110.00) },
+                'j': { n: 'B2', a: () => Synth.playHeavySub(123.47) }, 'k': { n: 'C3', a: () => Synth.playHeavySub(130.81) },
+                'l': { n: 'D3', a: () => Synth.playHeavySub(146.83) }
+            }
+        };
+
+        let currentBank = 'drums';
+        let activeKeys = {};
+
+        function renderKeyboard() {
+            document.querySelectorAll('.key').forEach(keyEl => {
+                const letter = keyEl.getAttribute('data-key');
+                const padData = Banks[currentBank][letter];
+                if(padData) {
+                    keyEl.querySelector('.key-name').innerText = padData.n;
+                    
+                    const newEl = keyEl.cloneNode(true);
+                    keyEl.parentNode.replaceChild(newEl, keyEl);
+                    
+                    // Re-add hover target listener for cursor
+                    newEl.addEventListener('mouseenter', () => dot.classList.add('hover-active'));
+                    newEl.addEventListener('mouseleave', () => dot.classList.remove('hover-active'));
+                    
+                    newEl.addEventListener('mousedown', () => triggerPad(letter));
+                    newEl.addEventListener('mouseup', () => releasePad(letter));
+                    newEl.addEventListener('mouseleave', () => releasePad(letter));
+                }
+            });
+        }
+
+        document.querySelectorAll('.route-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.route-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                currentBank = tab.getAttribute('data-bank');
+                renderKeyboard();
+            });
+        });
+
+        function triggerPad(keyChar) {
+            if(!isEngineAwake || activeKeys[keyChar]) return;
+            const padData = Banks[currentBank][keyChar];
+            if(padData) {
+                activeKeys[keyChar] = true; padData.a(); 
+                const el = document.querySelector(`.key[data-key="${keyChar}"]`);
+                if(el) el.classList.add('active');
+            }
+        }
+
+        function releasePad(keyChar) {
+            if(activeKeys[keyChar]) {
+                activeKeys[keyChar] = false;
+                const el = document.querySelector(`.key[data-key="${keyChar}"]`);
+                if(el) el.classList.remove('active');
+            }
+        }
+
+        renderKeyboard();
+        
+        window.addEventListener('keydown', (e) => { 
+            if(!e.repeat) triggerPad(e.key.toLowerCase()); 
+        });
+        window.addEventListener('keyup', (e) => releasePad(e.key.toLowerCase()));
+
+    </script>
+</body>
+</html>
