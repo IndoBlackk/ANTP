@@ -117,7 +117,7 @@
             cursor: grab;
         }
 
-        .logo-container:active {
+        .logo-container.dragging {
             cursor: grabbing;
         }
 
@@ -359,18 +359,17 @@
         });
     </script>
 
-    <!-- Three.js 3D Logo Logic -->
+    <!-- Three.js 3D Logo Logic with Custom Drag -->
     <script type="module">
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
         const container = document.getElementById('logo-3d');
 
-        // Scene Setup
+        // 1. Scene Setup
         const scene = new THREE.Scene();
         
-        // Pushed camera closer (Z: 2.5) so the logo defaults larger and face-on
+        // Locked Camera - completely static
         const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
         camera.position.set(0, 0, 2.5);
 
@@ -380,19 +379,7 @@
         renderer.setClearColor(0x000000, 0); 
         container.appendChild(renderer.domElement);
 
-        // --- THE METAL ROD FIX ---
-        const controls = new OrbitControls(camera, renderer.domElement);
-        controls.enableZoom = false; // Prevents zooming in/out
-        controls.enablePan = false;  // Prevents dragging the logo off-center
-        
-        // Locks the vertical axis perfectly so it behaves like it's on a metal rod
-        controls.minPolarAngle = Math.PI / 2; 
-        controls.maxPolarAngle = Math.PI / 2; 
-        
-        controls.enableDamping = true; 
-        controls.dampingFactor = 0.05;
-
-        // Studio lighting array
+        // 2. Studio Lighting
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
         scene.add(ambientLight);
 
@@ -407,6 +394,7 @@
         let modelGroup = new THREE.Group();
         scene.add(modelGroup);
 
+        // 3. Load Model
         const loader = new GLTFLoader();
         loader.load('model.gltf', (gltf) => {
             const model = gltf.scene;
@@ -421,23 +409,82 @@
                 }
             });
 
-            // Center the geometry perfectly inside the group
+            // Center geometry so it spins perfectly on its own axis
             const box = new THREE.Box3().setFromObject(model);
             const center = box.getCenter(new THREE.Vector3());
             model.position.sub(center);
             
-            // Adjust scale to fit beautifully within the 120x120px boundary
+            // Adjust scale
             const size = box.getSize(new THREE.Vector3());
             const maxDim = Math.max(size.x, size.y, size.z);
-            const scale = 2.4 / maxDim; // Increased scale for clearer visibility
+            const scale = 2.4 / maxDim; 
             model.scale.set(scale, scale, scale); 
+            
+            // Start perfectly face-on
+            modelGroup.rotation.set(0, 0, 0);
             
             modelGroup.add(model);
         });
 
+        // 4. Bespoke Drag Interaction ("Metal Rod" effect)
+        let isDragging = false;
+        let previousMousePosition = 0;
+        let targetRotation = 0;
+
+        // Mouse Events
+        container.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            container.classList.add('dragging');
+            previousMousePosition = e.clientX;
+        });
+
+        window.addEventListener('mouseup', () => {
+            isDragging = false;
+            container.classList.remove('dragging');
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const deltaMove = e.clientX - previousMousePosition;
+                // Sensitivity: 0.02 radians per pixel moved
+                targetRotation += deltaMove * 0.02;
+                previousMousePosition = e.clientX;
+            }
+        });
+
+        // Touch Events for Mobile compatibility
+        container.addEventListener('touchstart', (e) => {
+            isDragging = true;
+            previousMousePosition = e.touches[0].clientX;
+        }, { passive: true });
+
+        window.addEventListener('touchend', () => {
+            isDragging = false;
+        });
+
+        window.addEventListener('touchmove', (e) => {
+            if (isDragging) {
+                const deltaMove = e.touches[0].clientX - previousMousePosition;
+                targetRotation += deltaMove * 0.02;
+                previousMousePosition = e.touches[0].clientX;
+            }
+        }, { passive: true });
+
+        // 5. Animation Loop
         function animate() {
             requestAnimationFrame(animate);
-            controls.update(); 
+            
+            if (modelGroup.children.length > 0) {
+                // Smoothly ease the physical rotation to match the target
+                // This gives it that heavy, premium tactile feeling
+                modelGroup.rotation.y += (targetRotation - modelGroup.rotation.y) * 0.1;
+                
+                // Strictly enforce the "metal rod" constraints
+                modelGroup.rotation.x = 0;
+                modelGroup.rotation.z = 0;
+                modelGroup.position.set(0, 0, 0);
+            }
+
             renderer.render(scene, camera);
         }
         
