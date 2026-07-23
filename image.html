@@ -3,38 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ANTP | Coming Soon</title>
+    <title>ANTP | Image</title>
     <!-- ANTP FAVICON -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23f7f7f5'/%3E%3Crect x='6' y='6' width='8' height='8' fill='%23111110'/%3E%3Crect x='18' y='6' width='8' height='8' fill='none' stroke='%23111110' stroke-width='2'/%3E%3Crect x='6' y='18' width='8' height='8' fill='none' stroke='%23111110' stroke-width='2'/%3E%3Crect x='18' y='18' width='8' height='8' fill='%23111110'/%3E%3C/svg%3E">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Manrope:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,600&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --canvas: #f7f7f5;
             --ink: #111110; 
             --ink-faded: rgba(17, 17, 16, 0.4);
             --border: rgba(17, 17, 16, 0.15);
+            
             --sans: 'Manrope', sans-serif;
             --serif: 'Cormorant Garamond', serif;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; cursor: none; }
 
         body {
-            background-color: var(--canvas);
+            background-color: var(--canvas); 
             color: var(--ink);
-            font-family: var(--sans);
-            width: 100vw;
-            height: 100vh;
+            font-family: var(--sans); 
             overflow: hidden;
+            height: 100vh; width: 100vw; position: relative;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
-            cursor: none;
             box-shadow: inset 0 0 150px rgba(17, 17, 16, 0.03);
             display: flex;
             flex-direction: column;
@@ -47,16 +42,13 @@
             color: var(--canvas);
         }
 
-        /* The Ink Engine */
+        /* --- THE INK ENGINE --- */
         .ink-blend {
             mix-blend-mode: multiply;
             opacity: 0.92;
-            text-align: center;
-            position: relative;
-            z-index: 10;
         }
 
-        /* Custom Cursor */
+        /* --- CUSTOM CURSOR --- */
         .cursor-dot {
             position: fixed;
             top: 0; left: 0;
@@ -64,7 +56,7 @@
             background-color: var(--ink);
             border-radius: 50%;
             pointer-events: none;
-            z-index: 1000;
+            z-index: 10000;
             transform: translate(-50%, -50%);
             mix-blend-mode: multiply;
             transition: width 0.25s cubic-bezier(0.19, 1, 0.22, 1), 
@@ -76,7 +68,7 @@
             height: 16px;
         }
 
-        /* Paper Pulp Texture */
+        /* --- PAPER PULP NOISE --- */
         .noise-overlay {
             position: fixed;
             top: 0; left: 0;
@@ -93,48 +85,82 @@
             100% { background-position: 100% 100%; }
         }
 
-        /* Typography */
-        .meta-stamp {
-            font-size: 0.65rem;
-            text-transform: uppercase;
-            letter-spacing: 0.15em;
-            color: var(--ink-faded);
-            font-weight: 600;
-            margin-bottom: 2rem;
+        /* --- HEADER NAV --- */
+        .sys-header {
+            position: absolute; top: 3.5rem; left: 3.5rem; right: 4rem; z-index: 100;
+            display: flex; justify-content: space-between; align-items: flex-start;
+            mix-blend-mode: multiply; pointer-events: none;
+        }
+        
+        .brand-block { display: flex; flex-direction: column; gap: 0.5rem; pointer-events: auto;}
+        .sys-title { font-family: var(--serif); font-weight: 300; font-size: 2.5rem; font-style: italic; color: var(--ink); line-height: 0.8; letter-spacing: 1px;}
+        .sys-sub { font-family: var(--sans); font-size: 0.65rem; font-weight: 600; letter-spacing: 0.15em; color: var(--ink-faded); text-transform: uppercase; }
+
+        .nav-controls { display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem; pointer-events: auto;}
+        
+        .nav-btn {
+            font-family: var(--sans); font-size: 0.65rem; font-weight: 600; letter-spacing: 0.15em; color: var(--ink-faded);
+            text-decoration: none; text-transform: uppercase; transition: color 0.4s ease;
+            border-bottom: 1px solid transparent; padding-bottom: 2px;
+        }
+        .nav-btn:hover { color: var(--ink); }
+
+        /* --- EDITORIAL SELECTION LAYOUT --- */
+        .menu-container {
+            position: relative;
+            z-index: 90;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            pointer-events: auto;
         }
 
-        .title {
+        .primary-collection {
+            display: block;
             font-family: var(--serif);
-            font-size: clamp(3.5rem, 5vw, 6rem);
+            font-size: clamp(5rem, 9vw, 11rem);
+            font-weight: 300;
+            font-style: normal;
+            line-height: 0.85;
+            text-decoration: none;
+            color: rgba(17, 17, 16, 0.4);
+            letter-spacing: -0.02em;
+            margin-bottom: 3rem;
+            will-change: transform, color, filter, opacity, letter-spacing;
+            transition: transform 0.8s cubic-bezier(0.19, 1, 0.22, 1),
+                        color 0.6s ease,
+                        filter 0.8s cubic-bezier(0.19, 1, 0.22, 1),
+                        opacity 0.8s ease,
+                        letter-spacing 0.8s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+
+        .primary-collection:hover,
+        .primary-collection:focus-visible {
+            outline: none;
+            opacity: 1;
+            filter: blur(0px);
+            transform: scale(1.02);
+            color: var(--ink);
+            font-style: italic;
+            letter-spacing: 0.02em;
+        }
+
+        .future-collection {
+            font-family: var(--serif);
+            font-size: clamp(1.2rem, 2vw, 1.8rem);
             font-weight: 300;
             font-style: italic;
-            color: var(--ink);
-            line-height: 1;
-            margin-bottom: 3rem;
-            letter-spacing: -0.01em;
-        }
-
-        .back-btn {
-            font-family: var(--sans);
-            font-size: 0.65rem;
-            font-weight: 600;
-            letter-spacing: 0.15em;
             color: var(--ink-faded);
-            text-decoration: none;
-            text-transform: uppercase;
-            transition: color 0.4s ease;
-            border-bottom: 1px solid transparent;
-            padding-bottom: 4px;
+            letter-spacing: 0.05em;
+            opacity: 0.5;
+            cursor: default;
         }
 
-        .back-btn:hover {
-            color: var(--ink);
-        }
-
-        /* Soft Load Reveal */
+        /* Subtle load-in animations */
         .reveal {
             opacity: 0;
-            animation: fade-up 1.5s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+            animation: fade-up 1.2s cubic-bezier(0.19, 1, 0.22, 1) forwards;
         }
 
         @keyframes fade-up {
@@ -143,8 +169,11 @@
         }
 
         @media (max-width: 1024px) {
-            body { cursor: auto; }
+            body { cursor: auto; overflow-y: auto; display: block; padding-top: 12rem;}
             .cursor-dot { display: none; }
+            .sys-header { position: relative; top: 0; left: 0; padding: 2rem; margin-bottom: 4rem; }
+            .menu-container { padding: 0 2rem; }
+            .primary-collection { color: var(--ink); }
         }
     </style>
 </head>
@@ -153,10 +182,19 @@
     <div class="noise-overlay" id="noise"></div>
     <div class="cursor-dot" id="cursor-dot"></div>
 
-    <main class="ink-blend reveal">
-        <div class="meta-stamp">This is embarrassing...</div>
-        <h1 class="title">Coming soon.</h1>
-        <a href="index.html" class="back-btn hover-target">Return to Index</a>
+    <header class="sys-header reveal" style="animation-delay: 0.1s;">
+        <div class="brand-block">
+            <h1 class="sys-title">Image.</h1>
+            <p class="sys-sub">Visual Collections</p>
+        </div>
+        <div class="nav-controls">
+            <a href="index.html" class="nav-btn hover-target">Return</a>
+        </div>
+    </header>
+
+    <main class="menu-container ink-blend reveal" style="animation-delay: 0.3s;">
+        <a href="spring26.html" class="primary-collection hover-target">Spring '26</a>
+        <div class="future-collection">more coming soon...</div>
     </main>
 
     <!-- UI Logic for Cursor -->
