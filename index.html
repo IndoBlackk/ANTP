@@ -98,6 +98,7 @@
             padding: 4.5rem;
             z-index: 10;
             background-color: var(--canvas);
+            pointer-events: auto;
         }
 
         .brand-header {
@@ -106,12 +107,18 @@
             gap: 1.5rem;
         }
 
-        /* 3D Logo Container Setup */
+        /* Strictly Contained 3D Logo */
         .logo-container {
             width: 120px;
             height: 120px;
             position: relative;
             display: block;
+            z-index: 20;
+            cursor: grab;
+        }
+
+        .logo-container:active {
+            cursor: grabbing;
         }
 
         .logo-container canvas {
@@ -119,6 +126,7 @@
             width: 100% !important;
             height: 100% !important;
             outline: none;
+            pointer-events: auto;
         }
 
         .meta-stamp {
@@ -163,6 +171,7 @@
             justify-content: flex-end;
             padding-left: 8rem;
             padding-bottom: 15vh;
+            pointer-events: auto;
         }
 
         nav {
@@ -208,6 +217,7 @@
             transition: transform 0.5s cubic-bezier(0.19, 1, 0.22, 1), 
                         color 0.4s ease;
             padding-right: 2rem;
+            pointer-events: auto;
         }
 
         .nav-item:hover .nav-link {
@@ -279,12 +289,12 @@
     <aside class="panel-left reveal" style="animation-delay: 0.1s;">
         <header class="brand-header">
             <!-- 3D Logo Target Container -->
-            <a href="/" class="logo-container hover-target" aria-label="Home" id="logo-3d"></a>
+            <div class="logo-container hover-target" aria-label="3D Logo" id="logo-3d"></div>
             <div class="meta-stamp">Index / 001</div>
         </header>
 
         <article class="editorial-prose reveal" style="animation-delay: 0.3s;">
-            <p>Hi! I’m Archie. I built this site as my own creative output. A space where I can display some of my work, connect and communicate, and somewhere I can create for the sake of creating.</p>
+            <p>Hi! I'm Archie. I built this site as my own creative output. A space where I can display some of my work, connect and communicate, and somewhere I can create for the sake of creating.</p>
             <p>There is no purpose to this site but to act as my own digital canvas, a corner on the expanse of the internet that I can call my own. <em>Something I have shaped and moulded myself.</em></p>
         </article>
     </aside>
@@ -324,22 +334,20 @@
         const trail = document.getElementById('cursor-trail');
         const hoverTargets = document.querySelectorAll('.hover-target');
 
-        // Global mouse coordinates
-        window.cursorX = window.innerWidth / 2;
-        window.cursorY = window.innerHeight / 2;
-        
-        let trailX = window.cursorX;
-        let trailY = window.cursorY;
+        let cursorX = window.innerWidth / 2;
+        let cursorY = window.innerHeight / 2;
+        let trailX = cursorX;
+        let trailY = cursorY;
 
         document.addEventListener('mousemove', (e) => {
-            window.cursorX = e.clientX;
-            window.cursorY = e.clientY;
-            dot.style.transform = `translate3d(${window.cursorX}px, ${window.cursorY}px, 0) translate(-50%, -50%)`;
+            cursorX = e.clientX;
+            cursorY = e.clientY;
+            dot.style.transform = `translate3d(${cursorX}px, ${cursorY}px, 0) translate(-50%, -50%)`;
         });
 
         function renderCursor() {
-            trailX = lerp(trailX, window.cursorX, 0.12);
-            trailY = lerp(trailY, window.cursorY, 0.12);
+            trailX = lerp(trailX, cursorX, 0.12);
+            trailY = lerp(trailY, cursorY, 0.12);
             trail.style.transform = `translate3d(${trailX}px, ${trailY}px, 0) translate(-50%, -50%)`;
             requestAnimationFrame(renderCursor);
         }
@@ -355,25 +363,32 @@
     <script type="module">
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
         const container = document.getElementById('logo-3d');
 
         // Scene Setup configured specifically for a 1:1 aspect ratio logo container
         const scene = new THREE.Scene();
         
-        // 120px by 120px aspect ratio
         const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
-        camera.position.z = 4; // Pull camera in closer to make the model fill the container
+        camera.position.z = 4;
 
         const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
         renderer.setSize(120, 120);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        
-        // Disable clear color to allow the canvas to show through seamlessly
         renderer.setClearColor(0x000000, 0); 
         container.appendChild(renderer.domElement);
 
-        // Studio lighting array to define the logo's geometry
+        // OrbitControls for Dragging & Hover interactions
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableZoom = false; // Prevent user from zooming in/out
+        controls.enablePan = false;  // Prevent user from dragging the logo off-center
+        controls.enableDamping = true; // Adds a smooth, heavy feel when dragging
+        controls.dampingFactor = 0.05;
+        controls.autoRotate = true; // Slowly spins the logo when left alone
+        controls.autoRotateSpeed = 1.2;
+
+        // Studio lighting array
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
         scene.add(ambientLight);
 
@@ -409,38 +424,19 @@
             const center = box.getCenter(new THREE.Vector3());
             model.position.sub(center);
             
-            // Scale dynamically based on the bounding box size to ensure it fits the 120px container
+            // Scale dynamically based on the bounding box size to fit the container
             const size = box.getSize(new THREE.Vector3());
             const maxDim = Math.max(size.x, size.y, size.z);
-            const scale = 1.8 / maxDim; // Adjust the 1.8 constant if the logo is too small/large
+            const scale = 1.8 / maxDim; 
             model.scale.set(scale, scale, scale); 
             
             modelGroup.add(model);
         });
 
-        // Fluid Parallax Animation driven by global mouse coordinates
-        let targetRotationX = 0;
-        let targetRotationY = 0;
-
+        // Simplified Animation Loop driven by OrbitControls
         function animate() {
             requestAnimationFrame(animate);
-
-            if (window.cursorX !== undefined) {
-                // Determine mouse position relative to the center of the screen
-                const normalizedX = (window.cursorX / window.innerWidth) * 2 - 1;
-                const normalizedY = -(window.cursorY / window.innerHeight) * 2 + 1;
-                
-                // Set rotation targets
-                targetRotationY = normalizedX * 0.4;
-                targetRotationX = -normalizedY * 0.4;
-            }
-
-            if (modelGroup.children.length > 0) {
-                // Apply spring physics for silky smooth trailing
-                modelGroup.rotation.y += (targetRotationY - modelGroup.rotation.y) * 0.05;
-                modelGroup.rotation.x += (targetRotationX - modelGroup.rotation.x) * 0.05;
-            }
-
+            controls.update(); // Required for autoRotate and damping
             renderer.render(scene, camera);
         }
         
