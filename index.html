@@ -99,6 +99,7 @@
             z-index: 10;
             background-color: var(--canvas);
             pointer-events: auto;
+            overflow-y: auto;
         }
 
         .brand-header {
@@ -107,7 +108,7 @@
             gap: 1.5rem;
         }
 
-        /* Strictly Contained 3D Logo */
+        /* 3D Logo - Expanded Hitbox & Optical Alignment */
         .logo-container {
             width: 160px;
             height: 160px;
@@ -143,21 +144,21 @@
 
         .editorial-prose {
             text-align: justify;
-            margin-top: auto;
+            margin-top: 2rem;
         }
 
         /* Editorial Image Styling */
         .profile-portrait {
             width: 100%;
-            margin-bottom: 2.5rem;
+            margin-bottom: 2rem;
             position: relative;
+            overflow: hidden;
         }
 
         .profile-portrait img {
             width: 100%;
             height: auto;
             display: block;
-            /* Applies a high-end print zine aesthetic */
             filter: grayscale(100%) contrast(1.15);
             mix-blend-mode: multiply; 
         }
@@ -314,9 +315,9 @@
         </header>
 
         <article class="editorial-prose reveal" style="animation-delay: 0.3s;">
-            <!-- Added Profile Portrait -->
+            <!-- Profile Portrait -->
             <div class="profile-portrait">
-                <img src="archie.jpg" alt="Portrait">
+                <img src="archie.jpg" alt="Archie">
             </div>
             
             <p>Hi! I'm Archie. I built this site as my own creative output. A space where I can display some of my work, connect and communicate, and somewhere I can create for the sake of creating.</p>
@@ -392,7 +393,7 @@
         const container = document.getElementById('logo-3d');
         const trail = document.getElementById('cursor-trail');
 
-        // 1. Scene Setup - Frozen Camera pulled back to prevent clipping
+        // 1. Scene Setup - Frozen Camera
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
         camera.position.set(0, 0, 3.5);
@@ -435,9 +436,8 @@
             const center = box.getCenter(new THREE.Vector3());
             rawModel.position.sub(center);
 
-            // FIX: Correct the inherent export rotation 
-            // If the logo reads backwards (PTNA), change this from -Math.PI / 2 to positive Math.PI / 2
-            rawModel.rotation.y = -Math.PI / 2;
+            // Set raw model rotation to 0 so it loads precisely head-on
+            rawModel.rotation.y = 0;
             
             const size = box.getSize(new THREE.Vector3());
             const maxDim = Math.max(size.x, size.y, size.z);
@@ -446,12 +446,10 @@
             
             modelGroup.add(rawModel);
             modelGroup.scale.set(baseScale, baseScale, baseScale);
-            
-            // Start perfectly face-on
             modelGroup.rotation.set(0, 0, 0);
         });
 
-        // 4. Custom Momentum-Based Drag Interaction
+        // 4. Custom Drag & Slow Idle Spin Interaction
         let isDragging = false;
         let previousMouseX = 0;
         
@@ -480,7 +478,6 @@
             container.classList.add('dragging');
         });
 
-        // Release and Move mechanics on the WINDOW
         window.addEventListener('mouseup', () => {
             if (isDragging) {
                 isDragging = false;
@@ -517,25 +514,32 @@
             }
         }, { passive: true });
 
-        // 5. Physics Engine Loop
+        // 5. Physics Engine Loop with Idle Spin
         function animate() {
             requestAnimationFrame(animate);
             
             if (modelGroup.children.length > 0) {
-                // Apply frictionless momentum
-                if (!isDragging) {
+                if (isDragging) {
+                    // Follow user drag explicitly
+                    modelGroup.rotation.y = currentRotation;
+                } else {
+                    // Momentum decay followed by a continuous, very slow idle spin
                     velocityX *= 0.92; 
                     currentRotation += velocityX;
-                }
 
-                modelGroup.rotation.y = currentRotation;
+                    if (Math.abs(velocityX) < 0.001) {
+                        currentRotation += 0.004; // Gentle, elegant idle rotation speed
+                    }
+
+                    modelGroup.rotation.y = currentRotation;
+                }
                 
                 // Silky smooth interpolation for scale (hover effect)
                 currentScaleMultiplier += (targetScaleMultiplier - currentScaleMultiplier) * 0.15;
                 const dynamicScale = baseScale * currentScaleMultiplier;
                 modelGroup.scale.set(dynamicScale, dynamicScale, dynamicScale);
                 
-                // Absolute structural lock - no dipping or bowing
+                // Absolute structural lock - strictly horizontal spin
                 modelGroup.rotation.x = 0;
                 modelGroup.rotation.z = 0;
                 modelGroup.position.set(0, 0, 0);
