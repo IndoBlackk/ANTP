@@ -107,15 +107,15 @@
             gap: 1.5rem;
         }
 
-        /* Strictly Contained 3D Logo */
+        /* 3D Logo - Expanded Hitbox & Optical Alignment */
         .logo-container {
-            width: 120px;
-            height: 120px;
+            width: 160px;
+            height: 160px;
+            margin-left: -20px; /* Pulls the wider box left to keep the logo visually aligned with text */
             position: relative;
             display: block;
             z-index: 20;
             cursor: grab;
-            /* Prevents native dragging and highlighting */
             user-select: none; 
             -webkit-user-select: none;
             touch-action: none;
@@ -293,7 +293,7 @@
     <aside class="panel-left reveal" style="animation-delay: 0.1s;">
         <header class="brand-header">
             <!-- 3D Logo Target Container -->
-            <div class="logo-container hover-target" aria-label="3D Logo" id="logo-3d"></div>
+            <div class="logo-container" aria-label="3D Logo" id="logo-3d"></div>
             <div class="meta-stamp">Index / 001</div>
         </header>
 
@@ -371,13 +371,13 @@
         const container = document.getElementById('logo-3d');
         const trail = document.getElementById('cursor-trail');
 
-        // 1. Scene Setup - Frozen Camera
+        // 1. Scene Setup - Frozen Camera pulled back to prevent clipping
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
-        camera.position.set(0, 0, 2.5); // Camera is permanently locked here
+        camera.position.set(0, 0, 3.5); // Safely zoomed out
 
         const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-        renderer.setSize(120, 120);
+        renderer.setSize(160, 160); // Expanded canvas for generous hit-box
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.setClearColor(0x000000, 0); 
         container.appendChild(renderer.domElement);
@@ -409,7 +409,7 @@
                 }
             });
 
-            // Robustly calculate the bounding box, respecting the model's internal export offset
+            // Center to bounding box origin
             const box = new THREE.Box3().setFromObject(rawModel);
             const center = box.getCenter(new THREE.Vector3());
             rawModel.position.sub(center);
@@ -417,8 +417,8 @@
             const size = box.getSize(new THREE.Vector3());
             const maxDim = Math.max(size.x, size.y, size.z);
             
-            // Calculate and store the base scale to fill the 120px box
-            baseScale = 2.2 / maxDim; 
+            // Scaled down to guarantee no clipping edges
+            baseScale = 1.9 / maxDim; 
             
             modelGroup.add(rawModel);
             modelGroup.scale.set(baseScale, baseScale, baseScale);
@@ -427,53 +427,50 @@
             modelGroup.rotation.set(0, 0, 0);
         });
 
-        // 4. Custom Physical Drag & Snap Interaction (The Metal Rod)
+        // 4. Custom Momentum-Based Drag Interaction
         let isDragging = false;
-        let isHovered = false;
         let previousMouseX = 0;
         
-        let targetRotation = 0;
         let currentRotation = 0;
+        let velocityX = 0; // The momentum factor
         
         let targetScaleMultiplier = 1;
         let currentScaleMultiplier = 1;
 
         // Hover Mechanics
         container.addEventListener('mouseenter', () => {
-            isHovered = true;
-            targetScaleMultiplier = 1.08; // Subtle push-in pop effect on hover
+            targetScaleMultiplier = 1.06; // Subtle bump
             trail.classList.add('hover-active');
         });
 
         container.addEventListener('mouseleave', () => {
-            isHovered = false;
-            isDragging = false;
             targetScaleMultiplier = 1.0;
-            targetRotation = 0; // Snap perfectly back to 0 (face-on)
-            container.classList.remove('dragging');
             trail.classList.remove('hover-active');
+            // Deliberately NOT resetting rotation here so it stays where you spun it
         });
 
-        // Drag Mechanics
+        // Drag Mechanics on the CONTAINER
         container.addEventListener('mousedown', (e) => {
             isDragging = true;
             previousMouseX = e.clientX;
+            velocityX = 0; // Reset momentum when grabbed
             container.classList.add('dragging');
         });
 
+        // Release and Move mechanics on the WINDOW (Prevents losing track if cursor moves fast)
         window.addEventListener('mouseup', () => {
             if (isDragging) {
                 isDragging = false;
                 container.classList.remove('dragging');
-                targetRotation = 0; // Ease back to face-on when released
+                // Deliberately NOT snapping back to 0
             }
         });
 
         window.addEventListener('mousemove', (e) => {
             if (isDragging) {
                 const deltaX = e.clientX - previousMouseX;
-                // Directly manipulate the physical rotation target
-                targetRotation += deltaX * 0.02;
+                velocityX = deltaX * 0.015; // Set the spin velocity based on drag speed
+                currentRotation += velocityX; // Apply immediately
                 previousMouseX = e.clientX;
             }
         });
@@ -482,17 +479,18 @@
         container.addEventListener('touchstart', (e) => {
             isDragging = true;
             previousMouseX = e.touches[0].clientX;
+            velocityX = 0;
         }, { passive: true });
 
         window.addEventListener('touchend', () => {
             isDragging = false;
-            targetRotation = 0; 
         });
 
         window.addEventListener('touchmove', (e) => {
             if (isDragging) {
                 const deltaX = e.touches[0].clientX - previousMouseX;
-                targetRotation += deltaX * 0.02;
+                velocityX = deltaX * 0.015;
+                currentRotation += velocityX;
                 previousMouseX = e.touches[0].clientX;
             }
         }, { passive: true });
@@ -502,8 +500,12 @@
             requestAnimationFrame(animate);
             
             if (modelGroup.children.length > 0) {
-                // Silky smooth interpolation (lerping) for rotation
-                currentRotation += (targetRotation - currentRotation) * 0.12;
+                // Apply frictionless momentum
+                if (!isDragging) {
+                    velocityX *= 0.92; // Damping (the lower the number, the faster it stops)
+                    currentRotation += velocityX;
+                }
+
                 modelGroup.rotation.y = currentRotation;
                 
                 // Silky smooth interpolation for scale (hover effect)
@@ -511,7 +513,7 @@
                 const dynamicScale = baseScale * currentScaleMultiplier;
                 modelGroup.scale.set(dynamicScale, dynamicScale, dynamicScale);
                 
-                // Ensure it absolutely cannot pivot vertically
+                // Absolute structural lock - no dipping or bowing
                 modelGroup.rotation.x = 0;
                 modelGroup.rotation.z = 0;
                 modelGroup.position.set(0, 0, 0);
