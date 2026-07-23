@@ -1,1 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANTP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --canvas: #f7f7f5;
+            --ink: #050505;
+            --ink-faded: rgba(5, 5, 5, 0.4);
+            --border: rgba(5, 5, 5, 0.1);
+            --sans: 'Inter', sans-serif;
+            --serif: 'Cormorant Garamond', serif;
+        }
 
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--canvas);
+            color: var(--ink);
+            font-family: var(--sans);
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            display: grid;
+            grid-template-columns: clamp(350px, 30vw, 450px) 1fr;
+            cursor: none;
+        }
+
+        ::selection {
+            background: var(--ink);
+            color: var(--canvas);
+        }
+
+        /* Fluid Custom Cursor */
+        .cursor-dot {
+            position: fixed;
+            top: 0; left: 0;
+            width: 6px; height: 6px;
+            background-color: var(--ink);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 1000;
+            transform: translate(-50%, -50%);
+        }
+
+        .cursor-trail {
+            position: fixed;
+            top: 0; left: 0;
+            width: 44px; height: 44px;
+            border: 1px solid var(--ink-faded);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 999;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s cubic-bezier(0.19, 1, 0.22, 1), 
+                        height 0.3s cubic-bezier(0.19, 1, 0.22, 1),
+                        background-color 0.3s ease,
+                        border-color 0.3s ease;
+        }
+
+        .cursor-trail.hover-active {
+            width: 90px;
+            height: 90px;
+            background-color: var(--ink);
+            mix-blend-mode: exclusion;
+            border-color: transparent;
+        }
+
+        /* Unified Noise Overlay */
+        .noise-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            pointer-events: none;
+            z-index: 50;
+            background-image: url('data:image/svg+xml,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noise"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noise)" opacity="0.04"/%3E%3C/svg%3E');
+        }
+
+        /* Left Column: Context & Branding */
+        .panel-left {
+            position: relative;
+            height: 100vh;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 4.5rem;
+            z-index: 10;
+            background-color: var(--canvas);
+        }
+
+        .brand-header {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        /* 3D Logo Container Setup */
+        .logo-container {
+            width: 120px;
+            height: 120px;
+            position: relative;
+            display: block;
+        }
+
+        .logo-container canvas {
+            display: block;
+            width: 100% !important;
+            height: 100% !important;
+            outline: none;
+        }
+
+        .meta-stamp {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--ink-faded);
+            font-weight: 500;
+        }
+
+        .editorial-prose {
+            text-align: justify;
+        }
+
+        .editorial-prose p {
+            font-family: var(--serif);
+            font-size: 1.05rem;
+            line-height: 1.45;
+            margin-bottom: 1.25rem;
+            color: var(--ink);
+            font-weight: 400;
+        }
+
+        .editorial-prose p:first-of-type::first-line {
+            font-weight: 300;
+            font-size: 1.3rem;
+            letter-spacing: 0.02em;
+        }
+
+        .editorial-prose em {
+            font-style: italic;
+            letter-spacing: 0.02em;
+            color: var(--ink-faded);
+        }
+
+        /* Right Column: Interactive Canvas */
+        .panel-right {
+            position: relative;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding-left: 8rem;
+            padding-bottom: 15vh;
+        }
+
+        nav {
+            position: relative;
+            z-index: 10;
+        }
+
+        .nav-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5vh;
+        }
+
+        .nav-item {
+            position: relative;
+            width: fit-content;
+        }
+
+        .nav-meta {
+            position: absolute;
+            left: -3rem;
+            top: 1.5rem;
+            font-family: var(--sans);
+            font-size: 0.7rem;
+            color: var(--ink-faded);
+            transform: rotate(-90deg);
+            transform-origin: left center;
+            letter-spacing: 0.1em;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .nav-link {
+            display: block;
+            font-family: var(--serif);
+            font-size: clamp(3rem, 5vw, 6rem);
+            font-weight: 300;
+            line-height: 0.9;
+            color: rgba(5, 5, 5, 0.3);
+            text-decoration: none;
+            will-change: transform, color;
+            transition: transform 0.5s cubic-bezier(0.19, 1, 0.22, 1), 
+                        color 0.4s ease;
+            padding-right: 2rem;
+        }
+
+        .nav-item:hover .nav-link {
+            transform: translateX(20px);
+            color: var(--ink);
+        }
+
+        .nav-item:hover .nav-meta {
+            opacity: 1;
+        }
+
+        /* Subtle load-in animations */
+        .reveal {
+            opacity: 0;
+            animation: fade-up 1.5s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+        }
+
+        @keyframes fade-up {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 1024px) {
+            body {
+                grid-template-columns: 1fr;
+                overflow-y: auto;
+                height: auto;
+                cursor: auto;
+            }
+            .cursor-dot, .cursor-trail {
+                display: none;
+            }
+            .panel-left {
+                height: auto;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+                gap: 4rem;
+                padding: 3rem 2rem;
+            }
+            .panel-right {
+                padding: 4rem 2rem;
+                height: auto;
+                min-height: 70vh;
+                justify-content: center;
+            }
+            .nav-meta { display: none; }
+            .nav-link { color: var(--ink); }
+        }
+    </style>
+    
+    <!-- Import Maps for Modern Three.js Integration -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+</head>
+<body>
+
+    <!-- Unified Screen Noise -->
+    <div class="noise-overlay"></div>
+
+    <div class="cursor-dot" id="cursor-dot"></div>
+    <div class="cursor-trail" id="cursor-trail"></div>
+
+    <aside class="panel-left reveal" style="animation-delay: 0.1s;">
+        <header class="brand-header">
+            <!-- 3D Logo Target Container -->
+            <a href="/" class="logo-container hover-target" aria-label="Home" id="logo-3d"></a>
+            <div class="meta-stamp">Index / 001</div>
+        </header>
+
+        <article class="editorial-prose reveal" style="animation-delay: 0.3s;">
+            <p>Hi! I’m Archie. I built this site as my own creative output. A space where I can display some of my work, connect and communicate, and somewhere I can create for the sake of creating.</p>
+            <p>There is no purpose to this site but to act as my own digital canvas, a corner on the expanse of the internet that I can call my own. <em>Something I have shaped and moulded myself.</em></p>
+        </article>
+    </aside>
+
+    <main class="panel-right">
+        <nav>
+            <ul class="nav-list">
+                <li class="nav-item reveal" style="animation-delay: 0.4s;">
+                    <span class="nav-meta">01</span>
+                    <a href="/samplr" class="nav-link hover-target">Samplr – make noise</a>
+                </li>
+                <li class="nav-item reveal" style="animation-delay: 0.5s;">
+                    <span class="nav-meta">02</span>
+                    <a href="/audio" class="nav-link hover-target">Audio – Listen</a>
+                </li>
+                <li class="nav-item reveal" style="animation-delay: 0.6s;">
+                    <span class="nav-meta">03</span>
+                    <a href="/image" class="nav-link hover-target">Image – Visual Inspiration</a>
+                </li>
+                <li class="nav-item reveal" style="animation-delay: 0.7s;">
+                    <span class="nav-meta">04</span>
+                    <a href="/about" class="nav-link hover-target">About Me</a>
+                </li>
+                <li class="nav-item reveal" style="animation-delay: 0.8s;">
+                    <span class="nav-meta">05</span>
+                    <a href="/contact" class="nav-link hover-target">Contact</a>
+                </li>
+            </ul>
+        </nav>
+    </main>
+
+    <!-- Cursor Logic -->
+    <script>
+        const lerp = (a, b, n) => (1 - n) * a + n * b;
+        
+        const dot = document.getElementById('cursor-dot');
+        const trail = document.getElementById('cursor-trail');
+        const hoverTargets = document.querySelectorAll('.hover-target');
+
+        // Global mouse coordinates
+        window.cursorX = window.innerWidth / 2;
+        window.cursorY = window.innerHeight / 2;
+        
+        let trailX = window.cursorX;
+        let trailY = window.cursorY;
+
+        document.addEventListener('mousemove', (e) => {
+            window.cursorX = e.clientX;
+            window.cursorY = e.clientY;
+            dot.style.transform = `translate3d(${window.cursorX}px, ${window.cursorY}px, 0) translate(-50%, -50%)`;
+        });
+
+        function renderCursor() {
+            trailX = lerp(trailX, window.cursorX, 0.12);
+            trailY = lerp(trailY, window.cursorY, 0.12);
+            trail.style.transform = `translate3d(${trailX}px, ${trailY}px, 0) translate(-50%, -50%)`;
+            requestAnimationFrame(renderCursor);
+        }
+        requestAnimationFrame(renderCursor);
+
+        hoverTargets.forEach((el) => {
+            el.addEventListener('mouseenter', () => trail.classList.add('hover-active'));
+            el.addEventListener('mouseleave', () => trail.classList.remove('hover-active'));
+        });
+    </script>
+
+    <!-- Three.js 3D Logo Logic -->
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+        const container = document.getElementById('logo-3d');
+
+        // Scene Setup configured specifically for a 1:1 aspect ratio logo container
+        const scene = new THREE.Scene();
+        
+        // 120px by 120px aspect ratio
+        const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+        camera.position.z = 4; // Pull camera in closer to make the model fill the container
+
+        const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setSize(120, 120);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        
+        // Disable clear color to allow the canvas to show through seamlessly
+        renderer.setClearColor(0x000000, 0); 
+        container.appendChild(renderer.domElement);
+
+        // Studio lighting array to define the logo's geometry
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 2.0);
+        dirLight.position.set(2, 5, 4);
+        scene.add(dirLight);
+
+        const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        fillLight.position.set(-2, 0, 2);
+        scene.add(fillLight);
+
+        let modelGroup = new THREE.Group();
+        scene.add(modelGroup);
+
+        // Load the model.gltf
+        const loader = new GLTFLoader();
+        loader.load('model.gltf', (gltf) => {
+            const model = gltf.scene;
+
+            // Apply monochromatic shader to match ink tone
+            model.traverse((child) => {
+                if (child.isMesh) {
+                    child.material = new THREE.MeshStandardMaterial({
+                        color: 0x050505, 
+                        roughness: 0.5, 
+                        metalness: 0.15,
+                    });
+                }
+            });
+
+            // Center the geometry perfectly inside the group
+            const box = new THREE.Box3().setFromObject(model);
+            const center = box.getCenter(new THREE.Vector3());
+            model.position.sub(center);
+            
+            // Scale dynamically based on the bounding box size to ensure it fits the 120px container
+            const size = box.getSize(new THREE.Vector3());
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const scale = 1.8 / maxDim; // Adjust the 1.8 constant if the logo is too small/large
+            model.scale.set(scale, scale, scale); 
+            
+            modelGroup.add(model);
+        });
+
+        // Fluid Parallax Animation driven by global mouse coordinates
+        let targetRotationX = 0;
+        let targetRotationY = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (window.cursorX !== undefined) {
+                // Determine mouse position relative to the center of the screen
+                const normalizedX = (window.cursorX / window.innerWidth) * 2 - 1;
+                const normalizedY = -(window.cursorY / window.innerHeight) * 2 + 1;
+                
+                // Set rotation targets
+                targetRotationY = normalizedX * 0.4;
+                targetRotationX = -normalizedY * 0.4;
+            }
+
+            if (modelGroup.children.length > 0) {
+                // Apply spring physics for silky smooth trailing
+                modelGroup.rotation.y += (targetRotationY - modelGroup.rotation.y) * 0.05;
+                modelGroup.rotation.x += (targetRotationX - modelGroup.rotation.x) * 0.05;
+            }
+
+            renderer.render(scene, camera);
+        }
+        
+        animate();
+
+    </script>
+
+</body>
+</html>
