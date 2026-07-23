@@ -6,14 +6,14 @@
     <title>home</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Manrope:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
             --canvas: #f7f7f5;
             --ink: #050505;
             --ink-faded: rgba(5, 5, 5, 0.4);
             --border: rgba(5, 5, 5, 0.1);
-            --sans: 'Inter', sans-serif;
+            --sans: 'Manrope', sans-serif;
             --serif: 'Cormorant Garamond', serif;
         }
 
@@ -33,7 +33,7 @@
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
             display: grid;
-            grid-template-columns: clamp(350px, 30vw, 450px) 1fr;
+            grid-template-columns: minmax(320px, 24vw) 1fr;
             cursor: none;
         }
 
@@ -77,14 +77,15 @@
             border-color: transparent;
         }
 
-        /* Unified Noise Overlay */
+        /* Unified, Living Noise Overlay */
         .noise-overlay {
             position: fixed;
             top: 0; left: 0;
             width: 100vw; height: 100vh;
             pointer-events: none;
             z-index: 50;
-            background-image: url('data:image/svg+xml,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noise"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noise)" opacity="0.04"/%3E%3C/svg%3E');
+            background-image: url('data:image/svg+xml,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noise"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noise)" opacity="0.05"/%3E%3C/svg%3E');
+            background-repeat: repeat;
         }
 
         /* Left Column: Context & Branding */
@@ -95,7 +96,7 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            padding: 4.5rem;
+            padding: 4.5rem 3.5rem;
             z-index: 10;
             background-color: var(--canvas);
             pointer-events: auto;
@@ -108,7 +109,7 @@
             gap: 1.5rem;
         }
 
-        /* 3D Logo - Expanded Hitbox & Optical Alignment */
+        /* 3D Logo */
         .logo-container {
             width: 160px;
             height: 160px;
@@ -139,18 +140,19 @@
             text-transform: uppercase;
             letter-spacing: 0.15em;
             color: var(--ink-faded);
-            font-weight: 500;
+            font-weight: 600;
         }
 
+        /* Editorial Prose */
         .editorial-prose {
-            text-align: justify;
+            text-align: left;
             margin-top: 2rem;
+            padding-right: 1rem;
         }
 
-        /* Editorial Image Styling */
         .profile-portrait {
             width: 100%;
-            margin-bottom: 2rem;
+            margin-bottom: 2.5rem;
             position: relative;
             overflow: hidden;
         }
@@ -165,17 +167,22 @@
 
         .editorial-prose p {
             font-family: var(--serif);
-            font-size: 1.05rem;
-            line-height: 1.45;
-            margin-bottom: 1.25rem;
+            font-size: 1.15rem;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
             color: var(--ink);
             font-weight: 400;
         }
 
-        .editorial-prose p:first-of-type::first-line {
+        .editorial-prose p:first-of-type::first-letter {
+            float: left;
+            font-size: 4.2rem;
+            line-height: 0.75;
+            padding-top: 0.4rem;
+            padding-right: 0.6rem;
+            padding-left: 0.1rem;
             font-weight: 300;
-            font-size: 1.3rem;
-            letter-spacing: 0.02em;
+            color: var(--ink);
         }
 
         .editorial-prose em {
@@ -191,7 +198,7 @@
             display: flex;
             flex-direction: column;
             justify-content: center;
-            padding-left: 8rem;
+            padding-left: 10rem;
             pointer-events: auto;
         }
 
@@ -204,7 +211,7 @@
             list-style: none;
             display: flex;
             flex-direction: column;
-            gap: 1.5vh;
+            gap: 2vh;
         }
 
         .nav-item {
@@ -214,10 +221,11 @@
 
         .nav-meta {
             position: absolute;
-            left: -3rem;
-            top: 1.5rem;
+            left: -4rem;
+            top: 2rem;
             font-family: var(--sans);
-            font-size: 0.7rem;
+            font-size: 0.75rem;
+            font-weight: 500;
             color: var(--ink-faded);
             transform: rotate(-90deg);
             transform-origin: left center;
@@ -226,28 +234,112 @@
             transition: opacity 0.4s ease;
         }
 
+        /* --- MASTERED LIQUID INK FILL EFFECT --- */
         .nav-link {
             display: block;
             font-family: var(--serif);
-            font-size: clamp(3rem, 5vw, 6rem);
+            font-size: clamp(5rem, 8vw, 10rem);
             font-weight: 300;
-            line-height: 0.9;
-            color: rgba(5, 5, 5, 0.3);
+            line-height: 0.85;
             text-decoration: none;
-            will-change: transform, color;
-            transition: transform 0.5s cubic-bezier(0.19, 1, 0.22, 1), 
-                        color 0.4s ease;
             padding-right: 2rem;
             pointer-events: auto;
+            letter-spacing: -0.02em;
+            position: relative;
+            
+            /* Clean outline text state */
+            color: transparent;
+            -webkit-text-stroke: 1.5px rgba(5, 5, 5, 0.25);
+            transition: transform 0.6s cubic-bezier(0.19, 1, 0.22, 1), 
+                        -webkit-text-stroke 0.4s ease;
+        }
+
+        /* The liquid fill container masking layer */
+        .nav-link::before {
+            content: attr(data-text);
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            height: 0%;
+            color: var(--ink);
+            -webkit-text-stroke: 0px;
+            overflow: hidden;
+            /* Ultra-smooth organic fluid bounce curve */
+            transition: height 0.7s cubic-bezier(0.25, 1, 0.5, 1);
         }
 
         .nav-item:hover .nav-link {
-            transform: translateX(20px);
-            color: var(--ink);
+            transform: translateX(40px);
+            -webkit-text-stroke: 1.5px rgba(5, 5, 5, 0.8);
+        }
+
+        .nav-item:hover .nav-link::before {
+            height: 100%; /* Perfectly fills like rising liquid ink */
         }
 
         .nav-item:hover .nav-meta {
             opacity: 1;
+        }
+
+        /* --- PURE TYPOGRAPHIC CONTEXT PANEL --- */
+        .context-panel {
+            position: fixed;
+            right: 4rem;
+            top: 50%;
+            transform: translateY(-50%) translateX(20px);
+            width: 360px;
+            background: rgba(247, 247, 245, 0.75);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(5, 5, 5, 0.08);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.04);
+            padding: 3rem;
+            opacity: 0;
+            visibility: hidden;
+            transition: transform 0.8s cubic-bezier(0.19, 1, 0.22, 1), 
+                        opacity 0.6s ease,
+                        visibility 0s linear 0.8s;
+            z-index: 80;
+            pointer-events: none;
+        }
+
+        .context-panel.active {
+            transform: translateY(-50%) translateX(0);
+            opacity: 1;
+            visibility: visible;
+            transition: transform 0.8s cubic-bezier(0.19, 1, 0.22, 1), 
+                        opacity 0.6s ease,
+                        visibility 0s linear 0s;
+        }
+
+        .context-meta {
+            font-family: var(--sans);
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--ink-faded);
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            display: block;
+        }
+
+        .context-title {
+            font-family: var(--serif);
+            font-size: 2.5rem;
+            font-weight: 300;
+            font-style: italic;
+            color: var(--ink);
+            margin-bottom: 1rem;
+            line-height: 1;
+        }
+
+        .context-desc {
+            font-family: var(--sans);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: var(--ink);
+            font-weight: 400;
         }
 
         /* Subtle load-in animations */
@@ -268,7 +360,7 @@
                 height: auto;
                 cursor: auto;
             }
-            .cursor-dot, .cursor-trail {
+            .cursor-dot, .cursor-trail, .context-panel {
                 display: none;
             }
             .panel-left {
@@ -285,11 +377,11 @@
                 justify-content: center;
             }
             .nav-meta { display: none; }
-            .nav-link { color: var(--ink); }
+            .nav-link { color: var(--ink); -webkit-text-stroke: 0; }
+            .nav-link::before { display: none; }
         }
     </style>
     
-    <!-- Import Maps for Modern Three.js Integration -->
     <script type="importmap">
       {
         "imports": {
@@ -301,25 +393,20 @@
 </head>
 <body>
 
-    <!-- Unified Screen Noise -->
-    <div class="noise-overlay"></div>
-
+    <div class="noise-overlay" id="noise"></div>
     <div class="cursor-dot" id="cursor-dot"></div>
     <div class="cursor-trail" id="cursor-trail"></div>
 
     <aside class="panel-left reveal" style="animation-delay: 0.1s;">
         <header class="brand-header">
-            <!-- 3D Logo Target Container -->
             <div class="logo-container hover-target" aria-label="3D Logo" id="logo-3d"></div>
             <div class="meta-stamp">About Me</div>
         </header>
 
         <article class="editorial-prose reveal" style="animation-delay: 0.3s;">
-            <!-- Profile Portrait -->
             <div class="profile-portrait">
                 <img src="archie.jpg" alt="Archie">
             </div>
-            
             <p>Hi! I'm Archie. I built this site as my own creative output. A space where I can display some of my work, connect and communicate, and somewhere I can create for the sake of creating.</p>
             <p>There is no purpose to this site but to act as my own digital canvas, a corner on the expanse of the internet that I can call my own. <em>Something I have shaped and moulded myself.</em></p>
         </article>
@@ -328,34 +415,78 @@
     <main class="panel-right">
         <nav>
             <ul class="nav-list">
-                <li class="nav-item reveal" style="animation-delay: 0.4s;">
+                <li class="nav-item reveal" style="animation-delay: 0.4s;" 
+                    data-meta="01" 
+                    data-title="Samplr." 
+                    data-desc="An interactive digital playground. Make noise, manipulate frequencies, and experiment with generative soundscapes.">
                     <span class="nav-meta">01</span>
-                    <a href="/samplr" class="nav-link hover-target">Samplr – make noise</a>
+                    <a href="/samplr" class="nav-link hover-target" data-text="Samplr">Samplr</a>
                 </li>
-                <li class="nav-item reveal" style="animation-delay: 0.5s;">
+                <li class="nav-item reveal" style="animation-delay: 0.5s;" 
+                    data-meta="02" 
+                    data-title="Audio." 
+                    data-desc="A curated archive of auditory exploration. Listen to completed tracks, stems, and atmospheric recordings.">
                     <span class="nav-meta">02</span>
-                    <a href="/audio" class="nav-link hover-target">Audio – Listen</a>
+                    <a href="/audio" class="nav-link hover-target" data-text="Audio">Audio</a>
                 </li>
-                <li class="nav-item reveal" style="animation-delay: 0.6s;">
+                <li class="nav-item reveal" style="animation-delay: 0.6s;" 
+                    data-meta="03" 
+                    data-title="Image." 
+                    data-desc="Visual inspiration, photography, and structural references collected and curated over time.">
                     <span class="nav-meta">03</span>
-                    <a href="/image" class="nav-link hover-target">Image – Visual Inspiration</a>
+                    <a href="/image" class="nav-link hover-target" data-text="Image">Image</a>
                 </li>
-                <li class="nav-item reveal" style="animation-delay: 0.7s;">
+                <li class="nav-item reveal" style="animation-delay: 0.7s;" 
+                    data-meta="04" 
+                    data-title="About." 
+                    data-desc="The methodology, history, and intent behind the canvas.">
                     <span class="nav-meta">04</span>
-                    <a href="/about" class="nav-link hover-target">About Me</a>
+                    <a href="/about" class="nav-link hover-target" data-text="About">About</a>
                 </li>
-                <li class="nav-item reveal" style="animation-delay: 0.8s;">
+                <li class="nav-item reveal" style="animation-delay: 0.8s;" 
+                    data-meta="05" 
+                    data-title="Contact." 
+                    data-desc="Open channels for commission, collaboration, or general inquiry.">
                     <span class="nav-meta">05</span>
-                    <a href="/contact" class="nav-link hover-target">Contact</a>
+                    <a href="/contact" class="nav-link hover-target" data-text="Contact">Contact</a>
                 </li>
             </ul>
         </nav>
     </main>
 
-    <!-- Cursor Logic -->
+    <!-- Elevated Floating Context Panel -->
+    <div class="context-panel" id="context-panel">
+        <span class="context-meta" id="cp-meta">00</span>
+        <h2 class="context-title" id="cp-title">Title</h2>
+        <p class="context-desc" id="cp-desc">Description</p>
+    </div>
+
+    <!-- UI Logic -->
     <script>
+        const noise = document.getElementById('noise');
+        setInterval(() => {
+            noise.style.backgroundPosition = `${Math.floor(Math.random() * 100)}% ${Math.floor(Math.random() * 100)}%`;
+        }, 50);
+
+        const navItems = document.querySelectorAll('.nav-item');
+        const contextPanel = document.getElementById('context-panel');
+        const cpMeta = document.getElementById('cp-meta');
+        const cpTitle = document.getElementById('cp-title');
+        const cpDesc = document.getElementById('cp-desc');
+
+        navItems.forEach(item => {
+            item.addEventListener('mouseenter', () => {
+                cpMeta.textContent = item.dataset.meta;
+                cpTitle.textContent = item.dataset.title;
+                cpDesc.textContent = item.dataset.desc;
+                contextPanel.classList.add('active');
+            });
+            item.addEventListener('mouseleave', () => {
+                contextPanel.classList.remove('active');
+            });
+        });
+
         const lerp = (a, b, n) => (1 - n) * a + n * b;
-        
         const dot = document.getElementById('cursor-dot');
         const trail = document.getElementById('cursor-trail');
         const hoverTargets = document.querySelectorAll('.hover-target');
@@ -385,15 +516,15 @@
         });
     </script>
 
-    <!-- Three.js Bespoke Physics Logic -->
+    <!-- 3D Logic -->
     <script type="module">
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
         const container = document.getElementById('logo-3d');
         const trail = document.getElementById('cursor-trail');
 
-        // 1. Scene Setup - Frozen Camera
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
         camera.position.set(0, 0, 3.5);
@@ -404,15 +535,9 @@
         renderer.setClearColor(0x000000, 0); 
         container.appendChild(renderer.domElement);
 
-        // 2. Studio Lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
-        scene.add(ambientLight);
+        const pmremGenerator = new THREE.PMREMGenerator(renderer);
+        scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
 
-        const dirLight = new THREE.DirectionalLight(0xffffff, 2.0);
-        dirLight.position.set(2, 5, 4);
-        scene.add(dirLight);
-
-        // 3. Load & Center the Model Safely
         let modelGroup = new THREE.Group();
         scene.add(modelGroup);
         let baseScale = 1;
@@ -424,19 +549,17 @@
             rawModel.traverse((child) => {
                 if (child.isMesh) {
                     child.material = new THREE.MeshStandardMaterial({
-                        color: 0x050505, 
-                        roughness: 0.5, 
-                        metalness: 0.15,
+                        color: 0x1a1a1a, 
+                        roughness: 0.15, 
+                        metalness: 0.9,
+                        envMapIntensity: 2.5
                     });
                 }
             });
 
-            // Center to bounding box origin
             const box = new THREE.Box3().setFromObject(rawModel);
             const center = box.getCenter(new THREE.Vector3());
             rawModel.position.sub(center);
-
-            // Set raw model rotation to 0 so it loads precisely head-on
             rawModel.rotation.y = 0;
             
             const size = box.getSize(new THREE.Vector3());
@@ -449,17 +572,13 @@
             modelGroup.rotation.set(0, 0, 0);
         });
 
-        // 4. Custom Drag & Slow Idle Spin Interaction
         let isDragging = false;
         let previousMouseX = 0;
-        
         let currentRotation = 0;
         let velocityX = 0; 
-        
         let targetScaleMultiplier = 1;
         let currentScaleMultiplier = 1;
 
-        // Hover Mechanics
         container.addEventListener('mouseenter', () => {
             targetScaleMultiplier = 1.06; 
             trail.classList.add('hover-active');
@@ -470,7 +589,6 @@
             trail.classList.remove('hover-active');
         });
 
-        // Drag Mechanics on the CONTAINER
         container.addEventListener('mousedown', (e) => {
             isDragging = true;
             previousMouseX = e.clientX;
@@ -494,16 +612,13 @@
             }
         });
 
-        // Touch Events for Mobile compatibility
         container.addEventListener('touchstart', (e) => {
             isDragging = true;
             previousMouseX = e.touches[0].clientX;
             velocityX = 0;
         }, { passive: true });
 
-        window.addEventListener('touchend', () => {
-            isDragging = false;
-        });
+        window.addEventListener('touchend', () => isDragging = false);
 
         window.addEventListener('touchmove', (e) => {
             if (isDragging) {
@@ -514,32 +629,23 @@
             }
         }, { passive: true });
 
-        // 5. Physics Engine Loop with Idle Spin
         function animate() {
             requestAnimationFrame(animate);
             
             if (modelGroup.children.length > 0) {
                 if (isDragging) {
-                    // Follow user drag explicitly
                     modelGroup.rotation.y = currentRotation;
                 } else {
-                    // Momentum decay followed by a continuous, very slow idle spin
                     velocityX *= 0.92; 
                     currentRotation += velocityX;
-
-                    if (Math.abs(velocityX) < 0.001) {
-                        currentRotation += 0.004; // Gentle, elegant idle rotation speed
-                    }
-
+                    if (Math.abs(velocityX) < 0.001) currentRotation += 0.004; 
                     modelGroup.rotation.y = currentRotation;
                 }
                 
-                // Silky smooth interpolation for scale (hover effect)
                 currentScaleMultiplier += (targetScaleMultiplier - currentScaleMultiplier) * 0.15;
                 const dynamicScale = baseScale * currentScaleMultiplier;
                 modelGroup.scale.set(dynamicScale, dynamicScale, dynamicScale);
                 
-                // Absolute structural lock - strictly horizontal spin
                 modelGroup.rotation.x = 0;
                 modelGroup.rotation.z = 0;
                 modelGroup.position.set(0, 0, 0);
@@ -549,8 +655,6 @@
         }
         
         animate();
-
     </script>
-
 </body>
 </html>
