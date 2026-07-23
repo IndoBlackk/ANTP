@@ -115,9 +115,14 @@
             display: block;
             z-index: 20;
             cursor: grab;
-            /* Prevents selecting anything while dragging */
+            /* Prevents native dragging and highlighting */
             user-select: none; 
             -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        .logo-container.dragging {
+            cursor: grabbing;
         }
 
         .logo-container canvas {
@@ -288,7 +293,7 @@
     <aside class="panel-left reveal" style="animation-delay: 0.1s;">
         <header class="brand-header">
             <!-- 3D Logo Target Container -->
-            <div class="logo-container" aria-label="3D Logo" id="logo-3d"></div>
+            <div class="logo-container hover-target" aria-label="3D Logo" id="logo-3d"></div>
             <div class="meta-stamp">Index / 001</div>
         </header>
 
@@ -364,7 +369,7 @@
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
         const container = document.getElementById('logo-3d');
-        const trail = document.getElementById('cursor-trail'); // to trigger hover state on logo
+        const trail = document.getElementById('cursor-trail');
 
         // 1. Scene Setup - Frozen Camera
         const scene = new THREE.Scene();
@@ -385,18 +390,15 @@
         dirLight.position.set(2, 5, 4);
         scene.add(dirLight);
 
-        // 3. Load & Mathematically Clean the Model
+        // 3. Load & Center the Model Safely
         let modelGroup = new THREE.Group();
         scene.add(modelGroup);
+        let baseScale = 1;
 
         const loader = new GLTFLoader();
         loader.load('model.gltf', (gltf) => {
             const rawModel = gltf.scene;
-            const box = new THREE.Box3();
-            
-            box.makeEmpty();
 
-            // Extract ONLY the physical meshes, ignoring invisible export nodes
             rawModel.traverse((child) => {
                 if (child.isMesh) {
                     child.material = new THREE.MeshStandardMaterial({
@@ -404,49 +406,51 @@
                         roughness: 0.5, 
                         metalness: 0.15,
                     });
-                    box.expandByObject(child);
                 }
             });
 
-            // Mathematically shift the geometry back to a perfect true (0,0,0) center
+            // Robustly calculate the bounding box, respecting the model's internal export offset
+            const box = new THREE.Box3().setFromObject(rawModel);
             const center = box.getCenter(new THREE.Vector3());
-            rawModel.position.set(-center.x, -center.y, -center.z);
+            rawModel.position.sub(center);
             
             const size = box.getSize(new THREE.Vector3());
             const maxDim = Math.max(size.x, size.y, size.z);
-            const scale = 2.0 / maxDim; // Calibrated for maximum crisp visibility
             
-            // Wrap the cleaned model so we can scale and rotate the true center securely
+            // Calculate and store the base scale to fill the 120px box
+            baseScale = 2.2 / maxDim; 
+            
             modelGroup.add(rawModel);
-            modelGroup.scale.set(scale, scale, scale);
+            modelGroup.scale.set(baseScale, baseScale, baseScale);
             
             // Start perfectly face-on
             modelGroup.rotation.set(0, 0, 0);
         });
 
-        // 4. Custom Physical Drag & Snap Interaction
+        // 4. Custom Physical Drag & Snap Interaction (The Metal Rod)
         let isDragging = false;
         let isHovered = false;
         let previousMouseX = 0;
+        
         let targetRotation = 0;
         let currentRotation = 0;
         
-        let targetScale = 1;
-        let currentScale = 1;
+        let targetScaleMultiplier = 1;
+        let currentScaleMultiplier = 1;
 
         // Hover Mechanics
         container.addEventListener('mouseenter', () => {
             isHovered = true;
-            targetScale = 1.1; // Subtle pop effect on hover
+            targetScaleMultiplier = 1.08; // Subtle push-in pop effect on hover
             trail.classList.add('hover-active');
         });
 
         container.addEventListener('mouseleave', () => {
             isHovered = false;
-            isDragging = false; // Safely cancel drag if they slip off
-            targetScale = 1.0;
+            isDragging = false;
+            targetScaleMultiplier = 1.0;
             targetRotation = 0; // Snap perfectly back to 0 (face-on)
-            container.style.cursor = 'grab';
+            container.classList.remove('dragging');
             trail.classList.remove('hover-active');
         });
 
@@ -454,25 +458,44 @@
         container.addEventListener('mousedown', (e) => {
             isDragging = true;
             previousMouseX = e.clientX;
-            container.style.cursor = 'grabbing';
+            container.classList.add('dragging');
         });
 
         window.addEventListener('mouseup', () => {
             if (isDragging) {
                 isDragging = false;
-                container.style.cursor = 'grab';
-                targetRotation = 0; // Snap perfectly back to 0 (face-on) when let go
+                container.classList.remove('dragging');
+                targetRotation = 0; // Ease back to face-on when released
             }
         });
 
         window.addEventListener('mousemove', (e) => {
             if (isDragging) {
                 const deltaX = e.clientX - previousMouseX;
-                // Only manipulate the target rotation of the object itself
+                // Directly manipulate the physical rotation target
                 targetRotation += deltaX * 0.02;
                 previousMouseX = e.clientX;
             }
         });
+
+        // Touch Events for Mobile compatibility
+        container.addEventListener('touchstart', (e) => {
+            isDragging = true;
+            previousMouseX = e.touches[0].clientX;
+        }, { passive: true });
+
+        window.addEventListener('touchend', () => {
+            isDragging = false;
+            targetRotation = 0; 
+        });
+
+        window.addEventListener('touchmove', (e) => {
+            if (isDragging) {
+                const deltaX = e.touches[0].clientX - previousMouseX;
+                targetRotation += deltaX * 0.02;
+                previousMouseX = e.touches[0].clientX;
+            }
+        }, { passive: true });
 
         // 5. Physics Engine Loop
         function animate() {
@@ -483,14 +506,15 @@
                 currentRotation += (targetRotation - currentRotation) * 0.12;
                 modelGroup.rotation.y = currentRotation;
                 
-                // Silky smooth interpolation for scale
-                currentScale += (targetScale - currentScale) * 0.15;
-                const baseScale = 2.0 / 1.5; // Baseline derived from above
-                const dynamicScale = baseScale * currentScale;
+                // Silky smooth interpolation for scale (hover effect)
+                currentScaleMultiplier += (targetScaleMultiplier - currentScaleMultiplier) * 0.15;
+                const dynamicScale = baseScale * currentScaleMultiplier;
+                modelGroup.scale.set(dynamicScale, dynamicScale, dynamicScale);
                 
                 // Ensure it absolutely cannot pivot vertically
                 modelGroup.rotation.x = 0;
                 modelGroup.rotation.z = 0;
+                modelGroup.position.set(0, 0, 0);
             }
 
             renderer.render(scene, camera);
