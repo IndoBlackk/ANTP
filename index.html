@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>antp</title>
+    <title>ANTP</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
@@ -115,10 +115,9 @@
             display: block;
             z-index: 20;
             cursor: grab;
-        }
-
-        .logo-container.dragging {
-            cursor: grabbing;
+            /* Prevents selecting anything while dragging */
+            user-select: none; 
+            -webkit-user-select: none;
         }
 
         .logo-container canvas {
@@ -289,7 +288,7 @@
     <aside class="panel-left reveal" style="animation-delay: 0.1s;">
         <header class="brand-header">
             <!-- 3D Logo Target Container -->
-            <div class="logo-container hover-target" aria-label="3D Logo" id="logo-3d"></div>
+            <div class="logo-container" aria-label="3D Logo" id="logo-3d"></div>
             <div class="meta-stamp">Index / 001</div>
         </header>
 
@@ -359,19 +358,18 @@
         });
     </script>
 
-    <!-- Three.js 3D Logo Logic with Custom Drag -->
+    <!-- Three.js Bespoke Physics Logic -->
     <script type="module">
         import * as THREE from 'three';
         import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
         const container = document.getElementById('logo-3d');
+        const trail = document.getElementById('cursor-trail'); // to trigger hover state on logo
 
-        // 1. Scene Setup
+        // 1. Scene Setup - Frozen Camera
         const scene = new THREE.Scene();
-        
-        // Locked Camera - completely static
         const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
-        camera.position.set(0, 0, 2.5);
+        camera.position.set(0, 0, 2.5); // Camera is permanently locked here
 
         const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
         renderer.setSize(120, 120);
@@ -387,102 +385,112 @@
         dirLight.position.set(2, 5, 4);
         scene.add(dirLight);
 
-        const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
-        fillLight.position.set(-2, 0, 2);
-        scene.add(fillLight);
-
+        // 3. Load & Mathematically Clean the Model
         let modelGroup = new THREE.Group();
         scene.add(modelGroup);
 
-        // 3. Load Model
         const loader = new GLTFLoader();
         loader.load('model.gltf', (gltf) => {
-            const model = gltf.scene;
+            const rawModel = gltf.scene;
+            const box = new THREE.Box3();
+            
+            box.makeEmpty();
 
-            model.traverse((child) => {
+            // Extract ONLY the physical meshes, ignoring invisible export nodes
+            rawModel.traverse((child) => {
                 if (child.isMesh) {
                     child.material = new THREE.MeshStandardMaterial({
                         color: 0x050505, 
                         roughness: 0.5, 
                         metalness: 0.15,
                     });
+                    box.expandByObject(child);
                 }
             });
 
-            // Center geometry so it spins perfectly on its own axis
-            const box = new THREE.Box3().setFromObject(model);
+            // Mathematically shift the geometry back to a perfect true (0,0,0) center
             const center = box.getCenter(new THREE.Vector3());
-            model.position.sub(center);
+            rawModel.position.set(-center.x, -center.y, -center.z);
             
-            // Adjust scale
             const size = box.getSize(new THREE.Vector3());
             const maxDim = Math.max(size.x, size.y, size.z);
-            const scale = 2.4 / maxDim; 
-            model.scale.set(scale, scale, scale); 
+            const scale = 2.0 / maxDim; // Calibrated for maximum crisp visibility
+            
+            // Wrap the cleaned model so we can scale and rotate the true center securely
+            modelGroup.add(rawModel);
+            modelGroup.scale.set(scale, scale, scale);
             
             // Start perfectly face-on
             modelGroup.rotation.set(0, 0, 0);
-            
-            modelGroup.add(model);
         });
 
-        // 4. Bespoke Drag Interaction ("Metal Rod" effect)
+        // 4. Custom Physical Drag & Snap Interaction
         let isDragging = false;
-        let previousMousePosition = 0;
+        let isHovered = false;
+        let previousMouseX = 0;
         let targetRotation = 0;
+        let currentRotation = 0;
+        
+        let targetScale = 1;
+        let currentScale = 1;
 
-        // Mouse Events
+        // Hover Mechanics
+        container.addEventListener('mouseenter', () => {
+            isHovered = true;
+            targetScale = 1.1; // Subtle pop effect on hover
+            trail.classList.add('hover-active');
+        });
+
+        container.addEventListener('mouseleave', () => {
+            isHovered = false;
+            isDragging = false; // Safely cancel drag if they slip off
+            targetScale = 1.0;
+            targetRotation = 0; // Snap perfectly back to 0 (face-on)
+            container.style.cursor = 'grab';
+            trail.classList.remove('hover-active');
+        });
+
+        // Drag Mechanics
         container.addEventListener('mousedown', (e) => {
             isDragging = true;
-            container.classList.add('dragging');
-            previousMousePosition = e.clientX;
+            previousMouseX = e.clientX;
+            container.style.cursor = 'grabbing';
         });
 
         window.addEventListener('mouseup', () => {
-            isDragging = false;
-            container.classList.remove('dragging');
+            if (isDragging) {
+                isDragging = false;
+                container.style.cursor = 'grab';
+                targetRotation = 0; // Snap perfectly back to 0 (face-on) when let go
+            }
         });
 
         window.addEventListener('mousemove', (e) => {
             if (isDragging) {
-                const deltaMove = e.clientX - previousMousePosition;
-                // Sensitivity: 0.02 radians per pixel moved
-                targetRotation += deltaMove * 0.02;
-                previousMousePosition = e.clientX;
+                const deltaX = e.clientX - previousMouseX;
+                // Only manipulate the target rotation of the object itself
+                targetRotation += deltaX * 0.02;
+                previousMouseX = e.clientX;
             }
         });
 
-        // Touch Events for Mobile compatibility
-        container.addEventListener('touchstart', (e) => {
-            isDragging = true;
-            previousMousePosition = e.touches[0].clientX;
-        }, { passive: true });
-
-        window.addEventListener('touchend', () => {
-            isDragging = false;
-        });
-
-        window.addEventListener('touchmove', (e) => {
-            if (isDragging) {
-                const deltaMove = e.touches[0].clientX - previousMousePosition;
-                targetRotation += deltaMove * 0.02;
-                previousMousePosition = e.touches[0].clientX;
-            }
-        }, { passive: true });
-
-        // 5. Animation Loop
+        // 5. Physics Engine Loop
         function animate() {
             requestAnimationFrame(animate);
             
             if (modelGroup.children.length > 0) {
-                // Smoothly ease the physical rotation to match the target
-                // This gives it that heavy, premium tactile feeling
-                modelGroup.rotation.y += (targetRotation - modelGroup.rotation.y) * 0.1;
+                // Silky smooth interpolation (lerping) for rotation
+                currentRotation += (targetRotation - currentRotation) * 0.12;
+                modelGroup.rotation.y = currentRotation;
                 
-                // Strictly enforce the "metal rod" constraints
+                // Silky smooth interpolation for scale
+                currentScale += (targetScale - currentScale) * 0.15;
+                const baseScale = 2.0 / 1.5; // Baseline derived from above
+                const dynamicScale = baseScale * currentScale;
+                
+                // Ensure it absolutely cannot pivot vertically
                 modelGroup.rotation.x = 0;
                 modelGroup.rotation.z = 0;
-                modelGroup.position.set(0, 0, 0);
             }
 
             renderer.render(scene, camera);
