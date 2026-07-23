@@ -107,11 +107,11 @@
             gap: 1.5rem;
         }
 
-        /* 3D Logo - Expanded Hitbox & Optical Alignment */
+        /* Strictly Contained 3D Logo */
         .logo-container {
             width: 160px;
             height: 160px;
-            margin-left: -20px; /* Pulls the wider box left to keep the logo visually aligned with text */
+            margin-left: -20px; 
             position: relative;
             display: block;
             z-index: 20;
@@ -144,6 +144,22 @@
         .editorial-prose {
             text-align: justify;
             margin-top: auto;
+        }
+
+        /* Editorial Image Styling */
+        .profile-portrait {
+            width: 100%;
+            margin-bottom: 2.5rem;
+            position: relative;
+        }
+
+        .profile-portrait img {
+            width: 100%;
+            height: auto;
+            display: block;
+            /* Applies a high-end print zine aesthetic */
+            filter: grayscale(100%) contrast(1.15);
+            mix-blend-mode: multiply; 
         }
 
         .editorial-prose p {
@@ -293,11 +309,16 @@
     <aside class="panel-left reveal" style="animation-delay: 0.1s;">
         <header class="brand-header">
             <!-- 3D Logo Target Container -->
-            <div class="logo-container" aria-label="3D Logo" id="logo-3d"></div>
+            <div class="logo-container hover-target" aria-label="3D Logo" id="logo-3d"></div>
             <div class="meta-stamp">Index / 001</div>
         </header>
 
         <article class="editorial-prose reveal" style="animation-delay: 0.3s;">
+            <!-- Added Profile Portrait -->
+            <div class="profile-portrait">
+                <img src="archie.jpg" alt="Portrait">
+            </div>
+            
             <p>Hi! I'm Archie. I built this site as my own creative output. A space where I can display some of my work, connect and communicate, and somewhere I can create for the sake of creating.</p>
             <p>There is no purpose to this site but to act as my own digital canvas, a corner on the expanse of the internet that I can call my own. <em>Something I have shaped and moulded myself.</em></p>
         </article>
@@ -374,10 +395,10 @@
         // 1. Scene Setup - Frozen Camera pulled back to prevent clipping
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
-        camera.position.set(0, 0, 3.5); // Safely zoomed out
+        camera.position.set(0, 0, 3.5);
 
         const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-        renderer.setSize(160, 160); // Expanded canvas for generous hit-box
+        renderer.setSize(160, 160); 
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.setClearColor(0x000000, 0); 
         container.appendChild(renderer.domElement);
@@ -413,11 +434,14 @@
             const box = new THREE.Box3().setFromObject(rawModel);
             const center = box.getCenter(new THREE.Vector3());
             rawModel.position.sub(center);
+
+            // FIX: Correct the inherent export rotation 
+            // If the logo reads backwards (PTNA), change this from -Math.PI / 2 to positive Math.PI / 2
+            rawModel.rotation.y = -Math.PI / 2;
             
             const size = box.getSize(new THREE.Vector3());
             const maxDim = Math.max(size.x, size.y, size.z);
             
-            // Scaled down to guarantee no clipping edges
             baseScale = 1.9 / maxDim; 
             
             modelGroup.add(rawModel);
@@ -432,45 +456,43 @@
         let previousMouseX = 0;
         
         let currentRotation = 0;
-        let velocityX = 0; // The momentum factor
+        let velocityX = 0; 
         
         let targetScaleMultiplier = 1;
         let currentScaleMultiplier = 1;
 
         // Hover Mechanics
         container.addEventListener('mouseenter', () => {
-            targetScaleMultiplier = 1.06; // Subtle bump
+            targetScaleMultiplier = 1.06; 
             trail.classList.add('hover-active');
         });
 
         container.addEventListener('mouseleave', () => {
             targetScaleMultiplier = 1.0;
             trail.classList.remove('hover-active');
-            // Deliberately NOT resetting rotation here so it stays where you spun it
         });
 
         // Drag Mechanics on the CONTAINER
         container.addEventListener('mousedown', (e) => {
             isDragging = true;
             previousMouseX = e.clientX;
-            velocityX = 0; // Reset momentum when grabbed
+            velocityX = 0; 
             container.classList.add('dragging');
         });
 
-        // Release and Move mechanics on the WINDOW (Prevents losing track if cursor moves fast)
+        // Release and Move mechanics on the WINDOW
         window.addEventListener('mouseup', () => {
             if (isDragging) {
                 isDragging = false;
                 container.classList.remove('dragging');
-                // Deliberately NOT snapping back to 0
             }
         });
 
         window.addEventListener('mousemove', (e) => {
             if (isDragging) {
                 const deltaX = e.clientX - previousMouseX;
-                velocityX = deltaX * 0.015; // Set the spin velocity based on drag speed
-                currentRotation += velocityX; // Apply immediately
+                velocityX = deltaX * 0.015; 
+                currentRotation += velocityX; 
                 previousMouseX = e.clientX;
             }
         });
@@ -502,7 +524,7 @@
             if (modelGroup.children.length > 0) {
                 // Apply frictionless momentum
                 if (!isDragging) {
-                    velocityX *= 0.92; // Damping (the lower the number, the faster it stops)
+                    velocityX *= 0.92; 
                     currentRotation += velocityX;
                 }
 
