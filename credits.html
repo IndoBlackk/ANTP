@@ -1,1 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANTP | Archive Index & Credits</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23f7f7f5'/%3E%3Crect x='6' y='6' width='8' height='8' fill='%23111110'/%3E%3Crect x='18' y='6' width='8' height='8' fill='none' stroke='%23111110' stroke-width='2'/%3E%3Crect x='6' y='18' width='8' height='8' fill='none' stroke='%23111110' stroke-width='2'/%3E%3Crect x='18' y='18' width='8' height='8' fill='%23111110'/%3E%3C/svg%3E">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,600&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --canvas: #f7f7f5;
+            --ink: #111110; 
+            --ink-faded: rgba(17, 17, 16, 0.4);
+            --border: rgba(17, 17, 16, 0.15);
+            
+            --sans: 'Manrope', sans-serif;
+            --serif: 'Cormorant Garamond', serif;
+        }
 
+        * { box-sizing: border-box; margin: 0; padding: 0; cursor: none; }
+
+        body {
+            background-color: var(--canvas); 
+            color: var(--ink);
+            font-family: var(--sans); 
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            padding: 4rem;
+            min-height: 100vh;
+        }
+
+        ::selection { background: var(--ink); color: var(--canvas); }
+
+        /* --- THE INK ENGINE --- */
+        .ink-blend { mix-blend-mode: multiply; opacity: 0.92; }
+
+        /* --- CUSTOM CURSOR --- */
+        .cursor-dot {
+            position: fixed; top: 0; left: 0; width: 8px; height: 8px;
+            background-color: var(--ink); border-radius: 50%; pointer-events: none;
+            z-index: 10000; transform: translate(-50%, -50%); mix-blend-mode: multiply;
+            transition: width 0.25s cubic-bezier(0.19, 1, 0.22, 1), 
+                        height 0.25s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+        .cursor-dot.hover-active { width: 16px; height: 16px; }
+
+        /* --- PAPER PULP NOISE --- */
+        .noise-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: -1;
+            background-image: url('data:image/svg+xml,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noise"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="4" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noise)" opacity="0.06"/%3E%3C/svg%3E');
+            background-repeat: repeat; animation: shift-noise 0.2s steps(2) infinite;
+        }
+        @keyframes shift-noise { 0% { background-position: 0 0; } 100% { background-position: 100% 100%; } }
+
+        /* --- FROSTED GLASS CONTAINER --- */
+        .glass-panel {
+            background: rgba(247, 247, 245, 0.5);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--border);
+            padding: 4rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        /* --- HEADER --- */
+        .credits-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 4rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 2rem;
+        }
+
+        .title-block h1 {
+            font-family: var(--serif); font-size: 3.5rem; font-style: italic; font-weight: 300;
+            color: var(--ink); line-height: 1; letter-spacing: -0.01em;
+        }
+
+        .title-block p {
+            font-family: var(--sans); font-size: 0.65rem; font-weight: 600; letter-spacing: 0.15em; 
+            color: var(--ink-faded); text-transform: uppercase; margin-top: 1rem;
+        }
+
+        .close-btn {
+            font-family: var(--sans); font-size: 0.65rem; font-weight: 600; letter-spacing: 0.15em; 
+            color: var(--ink); text-transform: uppercase; text-decoration: none;
+            border-bottom: 1px solid var(--ink); padding-bottom: 2px;
+        }
+
+        /* --- CREDITS GRID --- */
+        .credits-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 3rem 2rem;
+            margin-bottom: 5rem;
+        }
+
+        .credit-item { display: flex; flex-direction: column; gap: 0.5rem; }
+        .credit-num { font-family: var(--sans); font-size: 0.55rem; font-weight: 700; color: var(--ink-faded); letter-spacing: 0.15em; text-transform: uppercase; }
+        .credit-designer { font-family: var(--serif); font-size: 1.4rem; font-style: italic; color: var(--ink); font-weight: 400; }
+        .credit-desc { font-family: var(--sans); font-size: 0.85rem; font-weight: 400; color: var(--ink); line-height: 1.5; }
+
+        /* --- LEGAL / FAIR USE DISCLAIMER --- */
+        .legal-block {
+            border-top: 1px solid var(--border);
+            padding-top: 3rem;
+            max-width: 800px;
+        }
+
+        .legal-title {
+            font-family: var(--sans); font-size: 0.55rem; font-weight: 700; color: var(--ink); 
+            letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 1.5rem;
+        }
+
+        .legal-text {
+            font-family: var(--serif); font-size: 1.1rem; color: var(--ink-faded);
+            line-height: 1.6; margin-bottom: 1rem;
+        }
+
+        .legal-text strong {
+            color: var(--ink);
+            font-weight: 600;
+        }
+
+        @media (max-width: 1024px) {
+            body { padding: 1rem; cursor: auto; }
+            .cursor-dot { display: none; }
+            .glass-panel { padding: 2rem; }
+            .credits-header { flex-direction: column; align-items: flex-start; gap: 2rem; }
+            .credits-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="noise-overlay" id="noise"></div>
+    <div class="cursor-dot" id="cursor-dot"></div>
+
+    <main class="glass-panel ink-blend">
+        <header class="credits-header">
+            <div class="title-block">
+                <h1>Archive Index.</h1>
+                <p>Spring '26 Curated Artifacts</p>
+            </div>
+            <a href="javascript:window.close();" class="close-btn hover-target">Close Window</a>
+        </header>
+
+        <section class="credits-grid">
+            <div class="credit-item">
+                <span class="credit-num">REF 01</span>
+                <span class="credit-designer">Maison Martin Margiela</span>
+                <span class="credit-desc">Zine editorial collage. Censored identity mask with exposed garment construction.</span>
+            </div>
+            <div class="credit-item">
+                <span class="credit-num">REF 02</span>
+                <span class="credit-designer">Prada</span>
+                <span class="credit-desc">Paillette top and green vinyl wrap skirt. Fall/Winter runway archive.</span>
+            </div>
+            <div class="credit-item">
+                <span class="credit-num">REF 03</span>
+                <span class="credit-designer">Maison Martin Margiela</span>
+                <span class="credit-desc">Taped face masking and structural zipper detailing. Late 90s presentation.</span>
+            </div>
+            <div class="credit-item">
+                <span class="credit-num">REF 04</span>
+                <span class="credit-designer">Alexander McQueen</span>
+                <span class="credit-desc">Theatrical runway finale. Model captured in simulated rain.</span>
+            </div>
+            <div class="credit-item">
+                <span class="credit-num">REF 05</span>
+                <span class="credit-designer">Alexander McQueen</span>
+                <span class="credit-desc">Red lace head covering. Fall/Winter 1998 "Joan" Collection.</span>
+            </div>
+            <div class="credit-item">
+                <span class="credit-num">REF 06</span>
+                <span class="credit-designer">Paco Rabanne Couture</span>
+                <span class="credit-desc">Silver chainmail dress and matching headdress. Print editorial tear.</span>
+            </div>
+            <div class="credit-item">
+                <span class="credit-num">REF 07</span>
+                <span class="credit-designer">Archival Runway</span>
+                <span class="credit-desc">Classic 90s structured tailoring and silhouette. Unidentified presentation.</span>
+            </div>
+            <div class="credit-item">
+                <span class="credit-num">REF 08</span>
+                <span class="credit-designer">Editorial Archival</span>
+                <span class="credit-desc">90s anti-fashion print editorial. Deep plunge sheer top.</span>
+            </div>
+            <div class="credit-item">
+                <span class="credit-num">REF 09</span>
+                <span class="credit-designer">Balenciaga</span>
+                <span class="credit-desc">Look 32. Winter 2022 360° runway presentation.</span>
+            </div>
+            <div class="credit-item">
+                <span class="credit-num">REF 10</span>
+                <span class="credit-designer">Tom Ford for Gucci</span>
+                <span class="credit-desc">Mid-90s Milan. Geometric velvet shirting and bleached brows.</span>
+            </div>
+            <div class="credit-item">
+                <span class="credit-num">REF 11</span>
+                <span class="credit-designer">Thierry Mugler</span>
+                <span class="credit-desc">Haute Couture runway detail. Architectural hat and sharp tailoring.</span>
+            </div>
+            <div class="credit-item">
+                <span class="credit-num">REF 12</span>
+                <span class="credit-designer">Prada</span>
+                <span class="credit-desc">Fall/Winter 1996. Psychedelic swirl trousers and velvet coat.</span>
+            </div>
+            <div class="credit-item">
+                <span class="credit-num">REF 13</span>
+                <span class="credit-designer">Maison Martin Margiela</span>
+                <span class="credit-desc">Signature veiled anonymity. 1990s archival runway portrait.</span>
+            </div>
+            <div class="credit-item">
+                <span class="credit-num">REF 14</span>
+                <span class="credit-designer">Editorial Archival</span>
+                <span class="credit-desc">Avant-garde headpiece and lacquer bowl styling. Late 90s print tear.</span>
+            </div>
+            <div class="credit-item">
+                <span class="credit-num">REF 15</span>
+                <span class="credit-designer">Editorial Archival</span>
+                <span class="credit-desc">High-saturation red tennis skirt and racket composition. </span>
+            </div>
+            <div class="credit-item">
+                <span class="credit-num">REF 16</span>
+                <span class="credit-designer">Studio Editorial</span>
+                <span class="credit-desc">Bare-chested grunge portrait. High-waisted plaid trousers.</span>
+            </div>
+            <div class="credit-item">
+                <span class="credit-num">REF 17</span>
+                <span class="credit-designer">Maison Martin Margiela</span>
+                <span class="credit-desc">Backstage presentation. Fully masked models in knitwear.</span>
+            </div>
+            <div class="credit-item">
+                <span class="credit-num">REF 18</span>
+                <span class="credit-designer">Thierry Mugler</span>
+                <span class="credit-desc">Haute Couture. Sculpted horn-like hair and severe structural silhouette.</span>
+            </div>
+            <div class="credit-item">
+                <span class="credit-num">REF 19</span>
+                <span class="credit-designer">Thierry Mugler</span>
+                <span class="credit-desc">Metallic corset and extreme hair styling. Late 90s editorial tear.</span>
+            </div>
+            <div class="credit-item">
+                <span class="credit-num">REF 20</span>
+                <span class="credit-designer">Archival Detail</span>
+                <span class="credit-desc">Macro focus on garment tying and fabric draping. Unidentified source.</span>
+            </div>
+            <div class="credit-item">
+                <span class="credit-num">REF 21</span>
+                <span class="credit-designer">Alexander McQueen</span>
+                <span class="credit-desc">Backstage photography. The infamous low-slung "bumster" skirt silhouette.</span>
+            </div>
+        </section>
+
+        <section class="legal-block">
+            <h3 class="legal-title">Copyright & Fair Use Disclaimer</h3>
+            <p class="legal-text">
+                <strong>Non-Commercial Purpose:</strong> This digital index and the associated visual archive ("Spring '26") exist solely as a personal, non-commercial digital canvas. The layout serves as a creative moodboard, an exercise in web architecture, and an educational study of archival fashion history.
+            </p>
+            <p class="legal-text">
+                <strong>No Claim to Ownership:</strong> I do not own, nor do I claim to own, the rights to any of the photographs, garments, runway imagery, or editorial tears displayed on this platform. All visual assets, intellectual property, and creative copyrights belong absolutely to their respective original creators, photographers, stylists, and luxury fashion houses. 
+            </p>
+            <p class="legal-text">
+                <strong>Fair Use Application:</strong> The images utilized herein are presented under the doctrine of Fair Use for the purposes of commentary, criticism, and inspirational curation. If you are the copyright holder of any artifact displayed within this archive and require immediate removal, please utilize the contact channels provided on the index page.
+            </p>
+        </section>
+    </main>
+
+    <script>
+        const dot = document.getElementById('cursor-dot');
+        const hoverTargets = document.querySelectorAll('.hover-target');
+
+        let cursorX = window.innerWidth / 2;
+        let cursorY = window.innerHeight / 2;
+
+        document.addEventListener('mousemove', (e) => {
+            cursorX = e.clientX;
+            cursorY = e.clientY;
+            dot.style.transform = `translate3d(${cursorX}px, ${cursorY}px, 0) translate(-50%, -50%)`;
+        });
+
+        hoverTargets.forEach((el) => {
+            el.addEventListener('mouseenter', () => dot.classList.add('hover-active'));
+            el.addEventListener('mouseleave', () => dot.classList.remove('hover-active'));
+        });
+    </script>
+</body>
+</html>
