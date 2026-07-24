@@ -1,1 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANTP | Spring '26</title>
+    <!-- ANTP FAVICON -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23f7f7f5'/%3E%3Crect x='6' y='6' width='8' height='8' fill='%23111110'/%3E%3Crect x='18' y='6' width='8' height='8' fill='none' stroke='%23111110' stroke-width='2'/%3E%3Crect x='6' y='18' width='8' height='8' fill='none' stroke='%23111110' stroke-width='2'/%3E%3Crect x='18' y='18' width='8' height='8' fill='%23111110'/%3E%3C/svg%3E">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,600&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --canvas: #f7f7f5;
+            --ink: #111110; 
+            --ink-faded: rgba(17, 17, 16, 0.4);
+            --border: rgba(17, 17, 16, 0.15);
+            
+            --sans: 'Manrope', sans-serif;
+            --serif: 'Cormorant Garamond', serif;
+        }
 
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; cursor: none; }
+
+        body {
+            background-color: var(--canvas); 
+            color: var(--ink);
+            font-family: var(--sans); 
+            overflow: hidden;
+            height: 100vh; width: 100vw; position: relative;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            box-shadow: inset 0 0 150px rgba(17, 17, 16, 0.03);
+        }
+
+        ::selection { background: var(--ink); color: var(--canvas); }
+
+        /* --- THE INK ENGINE --- */
+        .ink-blend {
+            mix-blend-mode: multiply;
+            opacity: 0.92;
+        }
+
+        /* --- CUSTOM CURSOR --- */
+        .cursor-dot {
+            position: fixed; top: 0; left: 0;
+            width: 8px; height: 8px;
+            background-color: var(--ink);
+            border-radius: 50%; pointer-events: none;
+            z-index: 10000; transform: translate(-50%, -50%);
+            mix-blend-mode: multiply;
+            transition: width 0.25s cubic-bezier(0.19, 1, 0.22, 1), 
+                        height 0.25s cubic-bezier(0.19, 1, 0.22, 1),
+                        background-color 0.2s, border 0.2s;
+        }
+
+        .cursor-dot.hover-active {
+            width: 16px; height: 16px;
+        }
+
+        body.grabbing .cursor-dot {
+            width: 28px; height: 28px;
+            background-color: transparent;
+            border: 1px solid var(--ink);
+        }
+
+        /* --- PAPER PULP NOISE --- */
+        .noise-overlay {
+            position: fixed; top: 0; left: 0;
+            width: 100vw; height: 100vh; pointer-events: none; z-index: 50;
+            background-image: url('data:image/svg+xml,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noise"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.75" numOctaves="4" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noise)" opacity="0.06"/%3E%3C/svg%3E');
+            background-repeat: repeat;
+            animation: shift-noise 0.2s steps(2) infinite;
+        }
+
+        @keyframes shift-noise {
+            0% { background-position: 0 0; }
+            100% { background-position: 100% 100%; }
+        }
+
+        /* --- HEADER NAV --- */
+        .sys-header {
+            position: absolute; top: 3.5rem; left: 3.5rem; right: 4rem; z-index: 100;
+            display: flex; justify-content: space-between; align-items: flex-start;
+            mix-blend-mode: multiply; pointer-events: none;
+        }
+        
+        .brand-block { display: flex; flex-direction: column; gap: 0.5rem; pointer-events: auto;}
+        .sys-title { font-family: var(--serif); font-weight: 300; font-size: 2.5rem; font-style: italic; color: var(--ink); line-height: 0.8; letter-spacing: 1px;}
+        .sys-sub { font-family: var(--sans); font-size: 0.65rem; font-weight: 600; letter-spacing: 0.15em; color: var(--ink-faded); text-transform: uppercase; }
+
+        .nav-controls { display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem; pointer-events: auto;}
+        
+        .nav-btn {
+            font-family: var(--sans); font-size: 0.65rem; font-weight: 600; letter-spacing: 0.15em; color: var(--ink-faded);
+            text-decoration: none; text-transform: uppercase; transition: color 0.4s ease;
+            border-bottom: 1px solid transparent; padding-bottom: 2px;
+        }
+        .nav-btn:hover { color: var(--ink); }
+
+        /* --- INTRO VEIL --- */
+        #intro-veil {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: var(--canvas); z-index: 2000;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transition: opacity 1.2s cubic-bezier(0.19, 1, 0.22, 1), visibility 1.2s;
+        }
+
+        .intro-title {
+            font-family: var(--serif); font-size: clamp(4rem, 6vw, 8rem); font-style: italic; font-weight: 300;
+            color: var(--ink); letter-spacing: -0.01em; margin-bottom: 2rem; mix-blend-mode: multiply;
+        }
+
+        .init-btn { 
+            font-family: var(--sans); font-size: 0.65rem; font-weight: 600; letter-spacing: 0.15em; 
+            color: var(--ink-faded); text-transform: uppercase; 
+            padding: 10px 0; border-bottom: 1px solid transparent;
+            transition: color 0.4s ease, letter-spacing 0.4s ease; 
+            mix-blend-mode: multiply;
+        }
+        .init-btn:hover { color: var(--ink); letter-spacing: 0.2em; }
+
+        /* --- THE EDITORIAL TABLE (CANVAS) --- */
+        #archive-canvas {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: auto; z-index: 10;
+            perspective: 2000px; 
+            perspective-origin: center;
+        }
+
+        /* High-End Physical Prints */
+        .draggable-artifact {
+            position: absolute; top: 0; left: 0; 
+            width: auto; max-width: 320px; max-height: 440px; 
+            object-fit: contain;
+            opacity: 0; pointer-events: none;
+            transform-style: preserve-3d;
+            will-change: transform, box-shadow; 
+            transition: opacity 0.8s ease, box-shadow 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+            transform-origin: center center;
+            
+            /* The physical paper styling */
+            background: #fcfcfb;
+            padding: 14px 14px 44px 14px; /* Editorial bottom margin */
+            border: 1px solid rgba(17, 17, 16, 0.05);
+            /* Realistic table shadow */
+            box-shadow: 0 10px 30px rgba(17, 17, 16, 0.06), 0 2px 8px rgba(17, 17, 16, 0.04);
+        }
+
+        .draggable-artifact.visible { opacity: 1; pointer-events: auto; }
+        
+        /* The shadow expands perfectly when lifted */
+        .draggable-artifact.active-drag { 
+            box-shadow: 0 45px 80px rgba(17, 17, 16, 0.12), 0 15px 25px rgba(17, 17, 16, 0.08); 
+        }
+
+        @media (max-width: 1024px) {
+            body { cursor: auto; }
+            .cursor-dot { display: none; }
+            .sys-header { position: relative; top: 0; left: 0; padding: 2rem; pointer-events: none; }
+            .nav-controls { display: none; } /* On mobile, back button usually handled by browser or simplified nav */
+            .draggable-artifact { max-width: 240px; }
+        }
+    </style>
+</head>
+<body>
+
+    <audio id="spring-audio" src="spring26.mp3" loop></audio>
+
+    <div class="noise-overlay" id="noise"></div>
+    <div class="cursor-dot" id="cursor-dot"></div>
+
+    <div id="intro-veil">
+        <h1 class="intro-title">Spring '26</h1>
+        <div class="init-btn hover-target" onclick="openCollection()">Open Collection</div>
+    </div>
+
+    <header class="sys-header">
+        <div class="brand-block">
+            <h1 class="sys-title">Spring '26</h1>
+            <p class="sys-sub">Editorial Selection</p>
+        </div>
+        <div class="nav-controls">
+            <a href="image.html" class="nav-btn hover-target">Directory</a>
+        </div>
+    </header>
+
+    <!-- THE TACTILE CANVAS STATE -->
+    <div id="archive-canvas">
+        <img src="spring26/1.png" class="draggable-artifact hover-target" alt="Artifact">
+        <img src="spring26/2.png" class="draggable-artifact hover-target" alt="Artifact">
+        <img src="spring26/3.png" class="draggable-artifact hover-target" alt="Artifact">
+        <img src="spring26/4.png" class="draggable-artifact hover-target" alt="Artifact">
+        <img src="spring26/5.png" class="draggable-artifact hover-target" alt="Artifact">
+        <img src="spring26/6.png" class="draggable-artifact hover-target" alt="Artifact">
+        <img src="spring26/7.png" class="draggable-artifact hover-target" alt="Artifact">
+        <img src="spring26/8.png" class="draggable-artifact hover-target" alt="Artifact">
+        <img src="spring26/9.png" class="draggable-artifact hover-target" alt="Artifact">
+        <img src="spring26/10.png" class="draggable-artifact hover-target" alt="Artifact">
+        <img src="spring26/11.png" class="draggable-artifact hover-target" alt="Artifact">
+        <img src="spring26/12.png" class="draggable-artifact hover-target" alt="Artifact">
+        <img src="spring26/13.png" class="draggable-artifact hover-target" alt="Artifact">
+        <img src="spring26/14.png" class="draggable-artifact hover-target" alt="Artifact">
+        <img src="spring26/15.png" class="draggable-artifact hover-target" alt="Artifact">
+        <img src="spring26/16.png" class="draggable-artifact hover-target" alt="Artifact">
+        <img src="spring26/17.png" class="draggable-artifact hover-target" alt="Artifact">
+        <img src="spring26/18.png" class="draggable-artifact hover-target" alt="Artifact">
+        <img src="spring26/19.png" class="draggable-artifact hover-target" alt="Artifact">
+        <img src="spring26/20.png" class="draggable-artifact hover-target" alt="Artifact">
+        <img src="spring26/21.png" class="draggable-artifact hover-target" alt="Artifact">
+    </div>
+
+    <script>
+        // --- GLOBAL CURSOR TRACKING ---
+        const dot = document.getElementById('cursor-dot');
+        const hoverTargets = document.querySelectorAll('.hover-target');
+
+        let cursorX = window.innerWidth / 2;
+        let cursorY = window.innerHeight / 2;
+
+        document.addEventListener('mousemove', (e) => {
+            cursorX = e.clientX;
+            cursorY = e.clientY;
+            dot.style.transform = `translate3d(${cursorX}px, ${cursorY}px, 0) translate(-50%, -50%)`;
+        });
+
+        hoverTargets.forEach((el) => {
+            el.addEventListener('mouseenter', () => dot.classList.add('hover-active'));
+            el.addEventListener('mouseleave', () => dot.classList.remove('hover-active'));
+        });
+
+        // --- MASTER AUDIO ENGINE ---
+        let audioCtx;
+        let droneGain, droneOsc1, droneOsc2;
+        const springAudio = document.getElementById('spring-audio');
+
+        function openCollection() {
+            // Remove Veil
+            const veil = document.getElementById('intro-veil');
+            veil.style.opacity = '0';
+            setTimeout(() => veil.style.visibility = 'hidden', 1200);
+
+            // Initialize Audio
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                
+                droneOsc1 = audioCtx.createOscillator();
+                droneOsc2 = audioCtx.createOscillator();
+                droneGain = audioCtx.createGain();
+
+                droneOsc1.type = 'triangle';
+                droneOsc1.frequency.value = 55.0; 
+                droneOsc2.type = 'sine';
+                droneOsc2.frequency.value = 54.5; 
+
+                droneGain.gain.value = 0; 
+
+                droneOsc1.connect(droneGain);
+                droneOsc2.connect(droneGain);
+                droneGain.connect(audioCtx.destination);
+
+                droneOsc1.start();
+                droneOsc2.start();
+
+                // Subtle underlying bass drone
+                droneGain.gain.setTargetAtTime(0.06, audioCtx.currentTime, 2.0); 
+
+                // Start specific track
+                springAudio.volume = 0; 
+                springAudio.play().catch(e => console.log("Audio play prevented"));
+                let vol = 0;
+                const fade = setInterval(() => { if (vol < 0.7) { vol += 0.05; springAudio.volume = vol; } else { clearInterval(fade); } }, 100);
+
+            } catch (e) { console.error("Audio Context failed"); }
+
+            // Scatter the editorial prints
+            scatterArtifacts();
+        }
+
+        // --- EDITORIAL DESK PHYSICS ENGINE ---
+        const artifacts = document.querySelectorAll('.draggable-artifact');
+        let physicsObjects = [];
+        let activeObj = null;
+        let dragOffsetX = 0, dragOffsetY = 0;
+        let globalZIndex = 100;
+
+        artifacts.forEach(el => {
+            physicsObjects.push({
+                el: el,
+                isDragging: false,
+                x: window.innerWidth / 2 - 160, // Start center
+                y: window.innerHeight / 2 - 220,
+                tx: window.innerWidth / 2 - 160, 
+                ty: window.innerHeight / 2 - 220,
+                vx: 0, vy: 0,
+                r: 0, tr: 0, vr: 0,
+                tiltX: 0, tiltY: 0, tTiltX: 0, tTiltY: 0,
+                scale: 0.9, tScale: 0.9 // Start slightly scaled down
+            });
+        });
+
+        function scatterArtifacts() {
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            const spreadWidth = window.innerWidth * 0.75; 
+            const spreadHeight = window.innerHeight * 0.65;
+
+            physicsObjects.forEach((obj, index) => {
+                // Stagger the reveal slightly
+                setTimeout(() => {
+                    obj.el.classList.add('visible');
+                    
+                    obj.tx = centerX + ((Math.random() - 0.5) * spreadWidth) - 160; 
+                    obj.ty = centerY + ((Math.random() - 0.5) * spreadHeight) - 220; 
+                    obj.tr = (Math.random() * 40) - 20; // Less rotation, more realistic layout
+                    obj.tScale = 1;
+                    
+                    globalZIndex++;
+                    obj.el.style.zIndex = globalZIndex;
+                }, index * 40); // 40ms stagger per image
+            });
+        }
+
+        physicsObjects.forEach(obj => {
+            obj.el.addEventListener('mousedown', (e) => {
+                if (!obj.el.classList.contains('visible') || activeObj) return;
+                e.stopPropagation(); 
+                
+                activeObj = obj;
+                obj.isDragging = true;
+                
+                globalZIndex++;
+                obj.el.style.zIndex = globalZIndex;
+                
+                obj.el.classList.add('active-drag');
+                document.body.classList.add('grabbing');
+                
+                // Slight lift off the table
+                obj.tScale = 1.04; 
+                obj.vr = 0; 
+
+                const rect = obj.el.getBoundingClientRect();
+                dragOffsetX = e.clientX - rect.left;
+                dragOffsetY = e.clientY - rect.top;
+                
+                e.preventDefault(); 
+            });
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!activeObj) return;
+            activeObj.tx = e.clientX - dragOffsetX;
+            activeObj.ty = e.clientY - dragOffsetY;
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (!activeObj) return;
+            activeObj.isDragging = false;
+            activeObj.tScale = 1; // Drop back to table
+            activeObj.el.classList.remove('active-drag');
+            document.body.classList.remove('grabbing');
+            activeObj = null;
+        });
+
+        function renderPhysics() {
+            physicsObjects.forEach(obj => {
+                if(!obj.el.classList.contains('visible')) return;
+
+                if (obj.isDragging) {
+                    obj.vx = obj.tx - obj.x;
+                    obj.vy = obj.ty - obj.y;
+                    
+                    obj.x = obj.tx;
+                    obj.y = obj.ty;
+                    
+                    // Heavy paper tilt resistance (tightened from previous version)
+                    obj.tTiltX = -(obj.vy * 0.2); 
+                    obj.tTiltY = (obj.vx * 0.2);  
+                    
+                    obj.tTiltX = Math.max(-15, Math.min(15, obj.tTiltX));
+                    obj.tTiltY = Math.max(-15, Math.min(15, obj.tTiltY));
+                    
+                } else {
+                    // Heavy friction (snaps to table faster)
+                    obj.vx *= 0.80; 
+                    obj.vy *= 0.80;
+                    obj.vr *= 0.90; 
+
+                    obj.tx += obj.vx;
+                    obj.ty += obj.vy;
+                    obj.tr += obj.vr;
+
+                    // Desk boundaries
+                    if (obj.tx < -150) { obj.tx = -150; obj.vx *= -0.2; }
+                    if (obj.ty < -150) { obj.ty = -150; obj.vy *= -0.2; }
+                    if (obj.tx > window.innerWidth - 200) { obj.tx = window.innerWidth - 200; obj.vx *= -0.2; }
+                    if (obj.ty > window.innerHeight - 200) { obj.ty = window.innerHeight - 200; obj.vy *= -0.2; }
+
+                    obj.x += (obj.tx - obj.x) * 0.25;
+                    obj.y += (obj.ty - obj.y) * 0.25;
+                    obj.r += (obj.tr - obj.r) * 0.25;
+                    
+                    obj.tTiltX = 0;
+                    obj.tTiltY = 0;
+                }
+
+                obj.scale += (obj.tScale - obj.scale) * 0.18;
+                obj.tiltX += (obj.tTiltX - obj.tiltX) * 0.15;
+                obj.tiltY += (obj.tTiltY - obj.tiltY) * 0.15;
+
+                // Subtle spin on throw
+                if (!obj.isDragging && (Math.abs(obj.vx) > 15 || Math.abs(obj.vy) > 15)) {
+                    obj.vr = (obj.vx + obj.vy) * 0.03; 
+                }
+
+                obj.el.style.transform = `
+                    translate3d(${obj.x}px, ${obj.y}px, 0)
+                    scale(${obj.scale})
+                    rotate(${obj.r}deg)
+                    rotateX(${obj.tiltX}deg)
+                    rotateY(${obj.tiltY}deg)
+                `;
+            });
+
+            requestAnimationFrame(renderPhysics);
+        }
+        
+        renderPhysics();
+
+    </script>
+</body>
+</html>
