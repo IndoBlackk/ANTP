@@ -128,38 +128,35 @@
             perspective-origin: center;
         }
 
-        /* High-End Physical Prints */
+        /* Custom PNG Artifacts */
         .draggable-artifact {
             position: absolute; top: 0; left: 0; 
-            width: auto; max-width: 320px; max-height: 440px; 
+            width: auto; max-width: 360px; max-height: 480px; /* Slightly larger bounds since there's no padding */
             object-fit: contain;
             opacity: 0; pointer-events: none;
             transform-style: preserve-3d;
-            will-change: transform, box-shadow; 
-            transition: opacity 0.8s ease, box-shadow 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+            will-change: transform, filter; 
+            transition: opacity 0.8s ease, filter 0.6s cubic-bezier(0.19, 1, 0.22, 1);
             transform-origin: center center;
             
-            /* The physical paper styling */
-            background: #fcfcfb;
-            padding: 14px 14px 44px 14px; /* Editorial bottom margin */
-            border: 1px solid rgba(17, 17, 16, 0.05);
-            /* Realistic table shadow */
-            box-shadow: 0 10px 30px rgba(17, 17, 16, 0.06), 0 2px 8px rgba(17, 17, 16, 0.04);
+            /* Transparent PNG Drop Shadow */
+            /* This maps the shadow to the actual ripped pixels, not a CSS box */
+            filter: drop-shadow(0 10px 20px rgba(17, 17, 16, 0.15));
         }
 
         .draggable-artifact.visible { opacity: 1; pointer-events: auto; }
         
-        /* The shadow expands perfectly when lifted */
+        /* The shadow expands perfectly around the ripped edges when lifted */
         .draggable-artifact.active-drag { 
-            box-shadow: 0 45px 80px rgba(17, 17, 16, 0.12), 0 15px 25px rgba(17, 17, 16, 0.08); 
+            filter: drop-shadow(0 35px 45px rgba(17, 17, 16, 0.22)); 
         }
 
         @media (max-width: 1024px) {
             body { cursor: auto; }
             .cursor-dot { display: none; }
             .sys-header { position: relative; top: 0; left: 0; padding: 2rem; pointer-events: none; }
-            .nav-controls { display: none; } /* On mobile, back button usually handled by browser or simplified nav */
-            .draggable-artifact { max-width: 240px; }
+            .nav-controls { display: none; }
+            .draggable-artifact { max-width: 260px; }
         }
     </style>
 </head>
@@ -288,14 +285,14 @@
             physicsObjects.push({
                 el: el,
                 isDragging: false,
-                x: window.innerWidth / 2 - 160, // Start center
+                x: window.innerWidth / 2 - 160, 
                 y: window.innerHeight / 2 - 220,
                 tx: window.innerWidth / 2 - 160, 
                 ty: window.innerHeight / 2 - 220,
                 vx: 0, vy: 0,
                 r: 0, tr: 0, vr: 0,
                 tiltX: 0, tiltY: 0, tTiltX: 0, tTiltY: 0,
-                scale: 0.9, tScale: 0.9 // Start slightly scaled down
+                scale: 0.9, tScale: 0.9 
             });
         });
 
@@ -306,18 +303,17 @@
             const spreadHeight = window.innerHeight * 0.65;
 
             physicsObjects.forEach((obj, index) => {
-                // Stagger the reveal slightly
                 setTimeout(() => {
                     obj.el.classList.add('visible');
                     
                     obj.tx = centerX + ((Math.random() - 0.5) * spreadWidth) - 160; 
                     obj.ty = centerY + ((Math.random() - 0.5) * spreadHeight) - 220; 
-                    obj.tr = (Math.random() * 40) - 20; // Less rotation, more realistic layout
+                    obj.tr = (Math.random() * 40) - 20; 
                     obj.tScale = 1;
                     
                     globalZIndex++;
                     obj.el.style.zIndex = globalZIndex;
-                }, index * 40); // 40ms stagger per image
+                }, index * 40); 
             });
         }
 
@@ -356,7 +352,7 @@
         window.addEventListener('mouseup', () => {
             if (!activeObj) return;
             activeObj.isDragging = false;
-            activeObj.tScale = 1; // Drop back to table
+            activeObj.tScale = 1; 
             activeObj.el.classList.remove('active-drag');
             document.body.classList.remove('grabbing');
             activeObj = null;
@@ -373,7 +369,6 @@
                     obj.x = obj.tx;
                     obj.y = obj.ty;
                     
-                    // Heavy paper tilt resistance (tightened from previous version)
                     obj.tTiltX = -(obj.vy * 0.2); 
                     obj.tTiltY = (obj.vx * 0.2);  
                     
@@ -381,7 +376,6 @@
                     obj.tTiltY = Math.max(-15, Math.min(15, obj.tTiltY));
                     
                 } else {
-                    // Heavy friction (snaps to table faster)
                     obj.vx *= 0.80; 
                     obj.vy *= 0.80;
                     obj.vr *= 0.90; 
@@ -390,7 +384,6 @@
                     obj.ty += obj.vy;
                     obj.tr += obj.vr;
 
-                    // Desk boundaries
                     if (obj.tx < -150) { obj.tx = -150; obj.vx *= -0.2; }
                     if (obj.ty < -150) { obj.ty = -150; obj.vy *= -0.2; }
                     if (obj.tx > window.innerWidth - 200) { obj.tx = window.innerWidth - 200; obj.vx *= -0.2; }
@@ -408,7 +401,6 @@
                 obj.tiltX += (obj.tTiltX - obj.tiltX) * 0.15;
                 obj.tiltY += (obj.tTiltY - obj.tiltY) * 0.15;
 
-                // Subtle spin on throw
                 if (!obj.isDragging && (Math.abs(obj.vx) > 15 || Math.abs(obj.vy) > 15)) {
                     obj.vr = (obj.vx + obj.vy) * 0.03; 
                 }
