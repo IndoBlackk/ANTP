@@ -106,19 +106,22 @@
             transition: opacity 1.2s cubic-bezier(0.19, 1, 0.22, 1), visibility 1.2s;
         }
 
-        .intro-title {
-            font-family: var(--serif); font-size: clamp(4rem, 6vw, 8rem); font-style: italic; font-weight: 300;
-            color: var(--ink); letter-spacing: -0.01em; margin-bottom: 2rem; mix-blend-mode: multiply;
+        .init-action {
+            font-family: var(--serif); font-size: clamp(3rem, 5vw, 6rem); font-style: italic; font-weight: 300;
+            color: var(--ink); letter-spacing: -0.01em; margin-bottom: 1.5rem; mix-blend-mode: multiply;
+            transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.19, 1, 0.22, 1);
         }
 
-        .init-btn { 
+        .init-sub {
             font-family: var(--sans); font-size: 0.65rem; font-weight: 600; letter-spacing: 0.15em; 
-            color: var(--ink-faded); text-transform: uppercase; 
-            padding: 10px 0; border-bottom: 1px solid transparent;
-            transition: color 0.4s ease, letter-spacing 0.4s ease; 
-            mix-blend-mode: multiply;
+            color: var(--ink-faded); text-transform: uppercase; mix-blend-mode: multiply;
+            transition: opacity 0.4s ease;
         }
-        .init-btn:hover { color: var(--ink); letter-spacing: 0.2em; }
+
+        #intro-veil:hover .init-action {
+            opacity: 0.6;
+            transform: scale(0.98);
+        }
 
         /* --- THE EDITORIAL TABLE (CANVAS) --- */
         #archive-canvas {
@@ -131,7 +134,7 @@
         /* Custom PNG Artifacts */
         .draggable-artifact {
             position: absolute; top: 0; left: 0; 
-            width: auto; max-width: 360px; max-height: 480px; /* Slightly larger bounds since there's no padding */
+            width: auto; max-width: 360px; max-height: 480px; 
             object-fit: contain;
             opacity: 0; pointer-events: none;
             transform-style: preserve-3d;
@@ -140,7 +143,6 @@
             transform-origin: center center;
             
             /* Transparent PNG Drop Shadow */
-            /* This maps the shadow to the actual ripped pixels, not a CSS box */
             filter: drop-shadow(0 10px 20px rgba(17, 17, 16, 0.15));
         }
 
@@ -167,9 +169,9 @@
     <div class="noise-overlay" id="noise"></div>
     <div class="cursor-dot" id="cursor-dot"></div>
 
-    <div id="intro-veil">
-        <h1 class="intro-title">Spring '26</h1>
-        <div class="init-btn hover-target" onclick="openCollection()">Open Collection</div>
+    <div id="intro-veil" class="hover-target" onclick="openCollection()">
+        <h1 class="init-action">Click To Open</h1>
+        <p class="init-sub">Drag and drop images to rearrange</p>
     </div>
 
     <header class="sys-header">
@@ -226,51 +228,37 @@
             el.addEventListener('mouseleave', () => dot.classList.remove('hover-active'));
         });
 
-        // --- MASTER AUDIO ENGINE ---
-        let audioCtx;
-        let droneGain, droneOsc1, droneOsc2;
-        const springAudio = document.getElementById('spring-audio');
-
+        // --- EDITORIAL DESK LOGIC ---
         function openCollection() {
-            // Remove Veil
+            // 1. Remove Veil
             const veil = document.getElementById('intro-veil');
             veil.style.opacity = '0';
             setTimeout(() => veil.style.visibility = 'hidden', 1200);
 
-            // Initialize Audio
-            try {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                
-                droneOsc1 = audioCtx.createOscillator();
-                droneOsc2 = audioCtx.createOscillator();
-                droneGain = audioCtx.createGain();
+            // 2. Audio Playback Promise 
+            const springAudio = document.getElementById('spring-audio');
+            springAudio.volume = 0;
+            const playPromise = springAudio.play();
+            
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    // Smooth volume fade up to exactly 45%
+                    let vol = 0;
+                    const fade = setInterval(() => { 
+                        vol += 0.05;
+                        if (vol >= 0.45) { 
+                            springAudio.volume = 0.45;
+                            clearInterval(fade); 
+                        } else {
+                            springAudio.volume = vol;
+                        }
+                    }, 50);
+                }).catch(error => {
+                    console.error("Audio autoplay was prevented by browser:", error);
+                });
+            }
 
-                droneOsc1.type = 'triangle';
-                droneOsc1.frequency.value = 55.0; 
-                droneOsc2.type = 'sine';
-                droneOsc2.frequency.value = 54.5; 
-
-                droneGain.gain.value = 0; 
-
-                droneOsc1.connect(droneGain);
-                droneOsc2.connect(droneGain);
-                droneGain.connect(audioCtx.destination);
-
-                droneOsc1.start();
-                droneOsc2.start();
-
-                // Subtle underlying bass drone
-                droneGain.gain.setTargetAtTime(0.06, audioCtx.currentTime, 2.0); 
-
-                // Start specific track
-                springAudio.volume = 0; 
-                springAudio.play().catch(e => console.log("Audio play prevented"));
-                let vol = 0;
-                const fade = setInterval(() => { if (vol < 0.7) { vol += 0.05; springAudio.volume = vol; } else { clearInterval(fade); } }, 100);
-
-            } catch (e) { console.error("Audio Context failed"); }
-
-            // Scatter the editorial prints
+            // 3. Scatter the editorial prints
             scatterArtifacts();
         }
 
